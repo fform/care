@@ -1,9 +1,8 @@
 [build]
-builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @care/shared build 2>/dev/null | true && pnpm --filter @care/api build && pnpm --filter @care/api db:migrate"
+buildCommand = "true"
 
 [deploy]
-startCommand = "pnpm --filter @care/api start"
+startCommand = "pnpm --filter @care/api build && pnpm --filter @care/api db:migrate && pnpm --filter @care/api start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

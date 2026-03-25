@@ -9,8 +9,8 @@
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "ios": "pnpm --filter @care/app ios",
-    "ship:api": "op run --env-file=.env -- railway up --service api",
-    "ship:web": "op run --env-file=.env -- railway up --service web",
+    "ship:api": "pnpm --filter @care/shared build && pnpm --filter @care/api type-check && op run --env-file=.env -- railway up --service api --detach",
+    "ship:web": "pnpm --filter @care/web type-check && op run --env-file=.env -- railway up --service web --detach",
     "ship": "pnpm ship:api && pnpm ship:web"
   },
   "devDependencies": {

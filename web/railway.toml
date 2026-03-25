@@ -1,6 +1,5 @@
 [build]
-builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @care/web build"
+buildCommand = "pnpm --filter @care/web build"
 
 [deploy]
 startCommand = "pnpm --filter @care/web start"
