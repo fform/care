@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @care/api build && pnpm --filter @care/api db:migrate"
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @care/shared build 2>/dev/null | true && pnpm --filter @care/api build && pnpm --filter @care/api db:migrate"
 
 [deploy]
 startCommand = "pnpm --filter @care/api start"

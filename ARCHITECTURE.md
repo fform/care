@@ -258,11 +258,31 @@ op run --env-file=.env -- pnpm dev
 
 ### Railway
 
-- Two Railway services: `api` and `web`, both in the same Railway project
-- Config maintained in repo: `api/railway.toml` and `web/railway.toml`
-- Railway project ID: `op://care/railway/project_id`
-- Deploys trigger on push to `main`
-- PostgreSQL database provisioned as a Railway plugin on the `api` service
+**Services** (one Railway project, one environment: production)
+| Service | Railway root dir | Domain |
+|---------|-----------------|--------|
+| `api` | `/` (repo root) | `api.yourdomain.com` |
+| `web` | `/` (repo root) | `yourdomain.com`, `www.yourdomain.com` |
+| `database` | — (Railway plugin) | internal Railway URL only |
+
+**Important:** Both services set root directory to `/` in Railway dashboard so the full pnpm workspace is available during build. The `railway.toml` in each subdirectory is picked up via Railway's service config path setting.
+
+**Deploys are manual** (intentional, not auto-deploy on push):
+```bash
+op run --env-file=.env -- pnpm ship        # deploy both
+op run --env-file=.env -- pnpm ship:api    # api only
+op run --env-file=.env -- pnpm ship:web    # web only
+```
+
+**First-time Railway setup:**
+1. `railway login`
+2. `railway link` (link to your project ID from `op://care/railway/project_id`)
+3. Create `api` and `web` services in Railway dashboard
+4. Set root directory to `/` for both services
+5. Set config path to `api/railway.toml` and `web/railway.toml` respectively
+6. Add PostgreSQL plugin — Railway injects `DATABASE_URL` automatically into `api` service
+7. Add all env vars from `.env.example` to each service in Railway dashboard
+8. Configure custom domains per service
 
 ### Expo / EAS
 

@@ -8,9 +8,10 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "deploy:api": "railway up --service api",
-    "deploy:web": "railway up --service web",
-    "deploy": "pnpm deploy:api && pnpm deploy:web"
+    "ios": "pnpm --filter @care/app ios",
+    "ship:api": "op run --env-file=.env -- railway up --service api",
+    "ship:web": "op run --env-file=.env -- railway up --service web",
+    "ship": "pnpm ship:api && pnpm ship:web"
   },
   "devDependencies": {
     "prettier": "^3.4.0",
