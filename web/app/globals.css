@@ -1,0 +1,10 @@
+:root {
+  --color-background: #F5F0E8;
+  --font-family: 'Open Sans', system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+}

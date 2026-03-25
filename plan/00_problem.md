@@ -34,4 +34,8 @@ It could get really confusing with how many things are being managed, the app / 
 
 If caring for a parent with medical records, we either have to find a HEPA certified approach or need to make sure they aren't violating rules by storing something in a way that's not allowed.
 
-Conversation around a care patient might be sensitive.
+Conversation around a care patient might be sensitive. Make it easy to understand who can see certain messages is crucial.
+
+**Naming**
+We need to brainstorm names for both the app, the caretakers, the patients, the plans, the concerns, etc. It should all be cohesive and safe/friendly/peaceful.
+
