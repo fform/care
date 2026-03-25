@@ -18,6 +18,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     bundleIdentifier: 'com.care.app',
     buildNumber: '1',
+    ...(process.env.APPLE_TEAM_ID
+      ? { appleTeamId: process.env.APPLE_TEAM_ID }
+      : {}),
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
     },
@@ -57,6 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         mode: 'production',
       },
     ],
+    './plugins/withOptionalSimulatorSigning',
   ],
   experiments: {
     typedRoutes: true,
