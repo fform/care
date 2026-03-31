@@ -1,45 +1,39 @@
 /**
  * Social auth helpers.
  *
- * Google  → expo-auth-session (PKCE). Returns an authorization code sent to the API.
+ * Google  → expo-auth-session (see app/(auth)/login.tsx: `useAuthRequest` + `useAutoDiscovery`).
  * Apple   → expo-apple-authentication (native iOS framework). Returns a signed
  *           identityToken JWT sent directly to the API for verification.
  *           No client_secret / p8 key needed on the client side.
+ *
+ * OAuth flow patterns: https://docs.expo.dev/guides/authentication/
+ * Google client ID + URL scheme: `config.ts` (must match Google Cloud).
  */
-import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
+import config, { GOOGLE_ANDROID_URL_SCHEME, GOOGLE_IOS_URL_SCHEME } from '../../config';
 
-// Required for expo-auth-session redirect on Android
+// Required for expo-auth-session redirect on Android (guide: call once at module load).
 WebBrowser.maybeCompleteAuthSession();
 
-// ── Google (PKCE via expo-auth-session) ──────────────────────────────────────
-
-export interface GoogleAuthResult {
-  provider: 'google';
-  code: string;
-  redirectUri: string;
+/** URL scheme Google gave you for this platform (used with `makeRedirectUri`). */
+export function googleOAuthUrlScheme(): string {
+  if (Platform.OS === 'android' && GOOGLE_ANDROID_URL_SCHEME) {
+    return GOOGLE_ANDROID_URL_SCHEME;
+  }
+  return GOOGLE_IOS_URL_SCHEME;
 }
 
-export async function signInWithGoogle(): Promise<GoogleAuthResult> {
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'care' });
-
-  const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
-
-  const request = new AuthSession.AuthRequest({
-    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-    redirectUri,
-    scopes: ['openid', 'profile', 'email'],
-    usePKCE: true,
-  });
-
-  const result = await request.promptAsync(discovery);
-
-  if (result.type !== 'success' || !result.params.code) {
-    throw new Error(`Google sign-in did not complete: ${result.type}`);
+/** Active Google OAuth client ID for this platform, from `config`. */
+export function googleOAuthClientId(): string {
+  if (Platform.OS === 'android') {
+    return config.oauth.google.androidClientId;
   }
-
-  return { provider: 'google', code: result.params.code, redirectUri };
+  if (Platform.OS === 'ios') {
+    return config.oauth.google.iosClientId;
+  }
+  return '';
 }
 
 // ── Apple (native iOS framework) ─────────────────────────────────────────────

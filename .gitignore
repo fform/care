@@ -30,9 +30,14 @@ pnpm-debug.log*
 # Railway
 .railway/
 
-# Expo
-ios/
-android/
+# Expo native — do not ignore whole `app/ios` or `app/android` (that hides Podfile from the IDE).
+# Ignore CocoaPods, Gradle, and build outputs only:
+app/ios/Pods/
+app/ios/build/
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+**/Pods/
 
 # Turbo
 .turbo/

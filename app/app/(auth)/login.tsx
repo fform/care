@@ -1,12 +1,88 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
 import { MotiView } from 'moti';
 import { GoogleLogo, AppleLogo, Envelope, Lock, ArrowRight } from 'phosphor-react-native';
-import { Button, Card, Input, Text } from '@care/shared/components';
+import { Button, Input, Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
-import { signInWithGoogle, signInWithApple, isAppleAuthAvailable } from '@/lib/auth';
+import { googleOAuthClientId, googleOAuthUrlScheme, signInWithApple } from '@/lib/auth';
+
+/** Google sign-in using `useAuthRequest` + `useAutoDiscovery` (Expo auth guide pattern). */
+function GoogleOAuthButton({
+  clientId,
+  onError,
+}: {
+  clientId: string;
+  onError: (message: string) => void;
+}) {
+  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
+  const redirectUri = useMemo(
+    () =>
+      AuthSession.makeRedirectUri({
+        scheme: googleOAuthUrlScheme(),
+        path: 'oauth2redirect',
+      }),
+    []
+  );
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId,
+      redirectUri,
+      scopes: ['openid', 'profile', 'email'],
+      usePKCE: true,
+    },
+    discovery
+  );
+
+  const { loginWithOAuth } = useAuthStore();
+  const handledSuccess = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!response) return;
+    if (response.type === 'cancel' || response.type === 'dismiss') return;
+    if (response.type === 'error') {
+      const err = response.error as { message?: string } | undefined;
+      onError(err?.message ?? 'Google sign-in failed');
+      return;
+    }
+    if (response.type !== 'success' || !response.params?.code) return;
+    const code = response.params.code as string;
+    if (handledSuccess.current === code) return;
+    handledSuccess.current = code;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await loginWithOAuth('google', { code, redirectUri });
+        if (!cancelled) router.replace('/(tabs)');
+      } catch (e: unknown) {
+        if (!cancelled) onError(e instanceof Error ? e.message : 'Something went wrong');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [response, loginWithOAuth, redirectUri, onError]);
+
+  return (
+    <Pressable
+      style={styles.socialButton}
+      disabled={!request}
+      onPress={() => {
+        onError('');
+        void promptAsync();
+      }}
+    >
+      <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />
+      <Text variant="label" style={styles.socialLabel}>
+        Continue with Google
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -17,6 +93,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { loginWithEmail, loginWithOAuth, register, isLoading } = useAuthStore();
+  const googleClientId = useMemo(() => googleOAuthClientId(), []);
 
   async function handleEmailSubmit() {
     setError(null);
@@ -32,15 +109,8 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleGoogle() {
-    setError(null);
-    try {
-      const result = await signInWithGoogle();
-      await loginWithOAuth('google', { code: result.code, redirectUri: result.redirectUri });
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err.message ?? 'Something went wrong');
-    }
+  function setGoogleError(message: string) {
+    setError(message || null);
   }
 
   async function handleApple() {
@@ -88,12 +158,21 @@ export default function LoginScreen() {
         transition={{ type: 'spring', damping: 20, delay: 150 }}
         style={styles.socialRow}
       >
-        <Pressable style={styles.socialButton} onPress={handleGoogle}>
-          <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />
-          <Text variant="label" style={styles.socialLabel}>
-            Continue with Google
-          </Text>
-        </Pressable>
+        {googleClientId ? (
+          <GoogleOAuthButton clientId={googleClientId} onError={setGoogleError} />
+        ) : (
+          <Pressable
+            style={styles.socialButton}
+            onPress={() =>
+              setError('Google sign-in is not configured (set GOOGLE_IOS_CLIENT_ID in config.ts).')
+            }
+          >
+            <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />
+            <Text variant="label" style={styles.socialLabel}>
+              Continue with Google
+            </Text>
+          </Pressable>
+        )}
         <Pressable style={styles.socialButton} onPress={handleApple}>
           <AppleLogo size={20} weight="bold" color={colors.textPrimary} />
           <Text variant="label" style={styles.socialLabel}>
@@ -168,12 +247,14 @@ export default function LoginScreen() {
         />
 
         <Pressable onPress={() => setMode(mode === 'login' ? 'register' : 'login')}>
-          <Text variant="bodySmall" color={colors.textSecondary} style={styles.toggleText}>
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <View style={styles.toggleRow}>
+            <Text variant="bodySmall" color={colors.textSecondary}>
+              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            </Text>
             <Text variant="label" color={colors.primary}>
               {mode === 'login' ? 'Sign up' : 'Sign in'}
             </Text>
-          </Text>
+          </View>
         </Pressable>
       </MotiView>
     </ScrollView>
@@ -209,5 +290,10 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { flexShrink: 0 },
   form: { gap: spacing[4] },
-  toggleText: { textAlign: 'center' },
+  toggleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'baseline',
+  },
 });

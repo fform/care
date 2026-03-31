@@ -1,8 +1,8 @@
-import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import type { ApiError } from '@care/shared/types';
+import config from '../../config';
 
-const BASE_URL = Constants.expoConfig?.extra?.apiUrl ?? 'http://localhost:3001';
+const BASE_URL = config.apiUrl;
 const TOKEN_KEY = 'care_access_token';
 
 export async function getToken(): Promise<string | null> {
