@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { AuthenticatedRequest } from '../middleware/auth';
+import type { AuthenticatedRequest } from '../auth';
 
 export const circlesRouter = Router();
 

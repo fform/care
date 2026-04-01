@@ -1,13 +1,12 @@
 /**
  * Social auth helpers.
  *
- * Google  → expo-auth-session (see app/(auth)/login.tsx: `useAuthRequest` + `useAutoDiscovery`).
- * Apple   → expo-apple-authentication (native iOS framework). Returns a signed
- *           identityToken JWT sent directly to the API for verification.
- *           No client_secret / p8 key needed on the client side.
+ * Google → `expo-auth-session/providers/google` (`useAuthRequest`, PKCE, no client code exchange).
+ *          The app sends `code` + `codeVerifier` to `POST /auth/google`; the API exchanges the code.
+ * Apple  → expo-apple-authentication (native). Server-side verification not wired yet.
  *
  * OAuth flow patterns: https://docs.expo.dev/guides/authentication/
- * Google client ID + URL scheme: `config.ts` (must match Google Cloud).
+ * Google client ID + URL scheme: `config.ts` (must match Google Cloud + API `GOOGLE_OAUTH_CLIENT_ID`).
  */
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';

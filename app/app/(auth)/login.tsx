@@ -1,23 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import { router } from 'expo-router';
 import { MotiView } from 'moti';
 import { GoogleLogo, AppleLogo, Envelope, Lock, ArrowRight } from 'phosphor-react-native';
 import { Button, Input, Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
-import { googleOAuthClientId, googleOAuthUrlScheme, signInWithApple } from '@/lib/auth';
+import { googleOAuthUrlScheme, signInWithApple } from '@/lib/auth';
+import config from '../../config';
 
-/** Google sign-in using `useAuthRequest` + `useAutoDiscovery` (Expo auth guide pattern). */
+/** Google: auth code + PKCE only — server exchanges the code (`POST /auth/google`). */
 function GoogleOAuthButton({
-  clientId,
   onError,
 }: {
-  clientId: string;
   onError: (message: string) => void;
 }) {
-  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
   const redirectUri = useMemo(
     () =>
       AuthSession.makeRedirectUri({
@@ -27,17 +26,16 @@ function GoogleOAuthButton({
     []
   );
 
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId,
-      redirectUri,
-      scopes: ['openid', 'profile', 'email'],
-      usePKCE: true,
-    },
-    discovery
-  );
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: config.oauth.google.iosClientId,
+    androidClientId: config.oauth.google.androidClientId || undefined,
+    redirectUri,
+    scopes: ['openid', 'profile', 'email'],
+    usePKCE: true,
+    shouldAutoExchangeCode: false,
+  });
 
-  const { loginWithOAuth } = useAuthStore();
+  const { loginWithGoogle } = useAuthStore();
   const handledSuccess = useRef<string | null>(null);
 
   useEffect(() => {
@@ -50,13 +48,22 @@ function GoogleOAuthButton({
     }
     if (response.type !== 'success' || !response.params?.code) return;
     const code = response.params.code as string;
+    const codeVerifier = request?.codeVerifier;
+    if (!codeVerifier) {
+      onError('Missing PKCE verifier');
+      return;
+    }
     if (handledSuccess.current === code) return;
     handledSuccess.current = code;
 
     let cancelled = false;
     (async () => {
       try {
-        await loginWithOAuth('google', { code, redirectUri });
+        await loginWithGoogle({
+          code,
+          codeVerifier,
+          redirectUri,
+        });
         if (!cancelled) router.replace('/(tabs)');
       } catch (e: unknown) {
         if (!cancelled) onError(e instanceof Error ? e.message : 'Something went wrong');
@@ -65,12 +72,17 @@ function GoogleOAuthButton({
     return () => {
       cancelled = true;
     };
-  }, [response, loginWithOAuth, redirectUri, onError]);
+  }, [response, request, loginWithGoogle, redirectUri, onError]);
+
+  const disabled =
+    !request ||
+    (Platform.OS === 'android' && !config.oauth.google.androidClientId) ||
+    (Platform.OS === 'ios' && !config.oauth.google.iosClientId);
 
   return (
     <Pressable
       style={styles.socialButton}
-      disabled={!request}
+      disabled={disabled}
       onPress={() => {
         onError('');
         void promptAsync();
@@ -92,8 +104,13 @@ export default function LoginScreen() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const { loginWithEmail, loginWithOAuth, register, isLoading } = useAuthStore();
-  const googleClientId = useMemo(() => googleOAuthClientId(), []);
+  const { loginWithEmail, register, isLoading } = useAuthStore();
+  const googleConfigured =
+    Platform.OS === 'ios'
+      ? !!config.oauth.google.iosClientId
+      : Platform.OS === 'android'
+        ? !!config.oauth.google.androidClientId
+        : false;
 
   async function handleEmailSubmit() {
     setError(null);
@@ -104,8 +121,8 @@ export default function LoginScreen() {
         await register(email, password, name);
       }
       router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err.message ?? 'Something went wrong');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     }
   }
 
@@ -116,16 +133,11 @@ export default function LoginScreen() {
   async function handleApple() {
     setError(null);
     try {
-      const result = await signInWithApple();
-      await loginWithOAuth('apple', {
-        identityToken: result.identityToken,
-        fullName: result.fullName,
-      });
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      // ERR_CANCELED = user dismissed the sheet — not an error worth showing
-      if (err?.code !== 'ERR_CANCELED') {
-        setError(err.message ?? 'Something went wrong');
+      await signInWithApple();
+      setError('Apple sign-in is not available from the API yet. Use Google or email.');
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
       }
     }
   }
@@ -158,13 +170,13 @@ export default function LoginScreen() {
         transition={{ type: 'spring', damping: 20, delay: 150 }}
         style={styles.socialRow}
       >
-        {googleClientId ? (
-          <GoogleOAuthButton clientId={googleClientId} onError={setGoogleError} />
+        {googleConfigured ? (
+          <GoogleOAuthButton onError={setGoogleError} />
         ) : (
           <Pressable
             style={styles.socialButton}
             onPress={() =>
-              setError('Google sign-in is not configured (set GOOGLE_IOS_CLIENT_ID in config.ts).')
+              setError('Google sign-in is not configured (set OAuth client IDs in config / env).')
             }
           >
             <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />

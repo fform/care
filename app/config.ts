@@ -1,20 +1,14 @@
 import * as Updates from 'expo-updates';
+import { googleIosUrlSchemeFromClientId } from './googleIosUrlScheme';
 
-// ── Google Sign-In (paste from Google Cloud → OAuth client; must match console) ──────────────
-
-export const GOOGLE_IOS_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ??
-  '377020404904-aenb5m2ft60mv60tu8ign41ptvo1bn83.apps.googleusercontent.com';
-
+/** iOS/Android OAuth client IDs and redirect schemes — set via `EXPO_PUBLIC_*` (see Google Cloud Console). */
+export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+/** Explicit scheme or derived from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` so it matches `app.config` `scheme`. */
 export const GOOGLE_IOS_URL_SCHEME =
-  process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ??
-  'com.googleusercontent.apps.377020404904-aenb5m2ft60mv60tu8ign41ptvo1bn83';
-
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ||
+  googleIosUrlSchemeFromClientId(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '');
 export const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
-
 export const GOOGLE_ANDROID_URL_SCHEME = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_URL_SCHEME ?? '';
-
-// ── App config ──────────────────────────────────────────────────────────────────────────────
 
 export type AppEnv = 'dev' | 'preview' | 'production';
 
@@ -40,7 +34,8 @@ function envFromUpdatesChannel(): AppEnv {
 const env = envFromUpdatesChannel();
 
 const base: AppConfig = {
-  apiUrl: 'https://care-api.up.railway.app',
+  apiUrl:
+    process.env.EXPO_PUBLIC_API_URL ?? 'https://care-api.up.railway.app',
   mixpanelToken: '',
   env,
   oauth: {
@@ -53,6 +48,7 @@ const base: AppConfig = {
 
 /**
  * Runtime config. `env` follows `expo-updates` channel (OTA).
- * Google: override client IDs / URL scheme via EXPO_PUBLIC_* env vars if needed.
+ * Google OAuth: the app still needs public client IDs + redirect schemes for `expo-auth-session`;
+ * code exchange runs on the API (`GOOGLE_OAUTH_CLIENT_ID` must match the client used here).
  */
 export default base;

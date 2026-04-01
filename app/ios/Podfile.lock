@@ -90,6 +90,8 @@ PODS:
     - React-Core
     - React-runtimescheduler
     - ReactCommon
+  - ExpoNotifications (55.0.14):
+    - ExpoModulesCore
   - ExpoRouter (55.0.8):
     - ExpoModulesCore
     - RNScreens
@@ -2292,6 +2294,7 @@ DEPENDENCIES:
   - "ExpoLogBox (from `../../node_modules/.pnpm/@expo+log-box@55.0.8_@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.2_4odzyvt4lupzx26dty4ny45cty/node_modules/@expo/log-box`)"
   - "ExpoModulesCore (from `../../node_modules/.pnpm/expo-modules-core@55.0.18_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-config@0_rtptnyrxbm6irczkvu2gcvmzui/node_modules/expo-modules-core`)"
   - "ExpoModulesJSI (from `../../node_modules/.pnpm/expo-modules-core@55.0.18_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-config@0_rtptnyrxbm6irczkvu2gcvmzui/node_modules/expo-modules-core`)"
+  - "ExpoNotifications (from `../../node_modules/.pnpm/expo-notifications@55.0.14_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+m_yxn6zpf2izuarls35ydlpgtinm/node_modules/expo-notifications/ios`)"
   - "ExpoRouter (from `../../node_modules/.pnpm/expo-router@55.0.8_p7okv376by6y54ns7j3hlhwhcq/node_modules/expo-router/ios`)"
   - "ExpoSecureStore (from `../../node_modules/.pnpm/expo-secure-store@55.0.9_expo@55.0.9/node_modules/expo-secure-store/ios`)"
   - "ExpoSplashScreen (from `../../node_modules/.pnpm/expo-splash-screen@55.0.13_expo@55.0.9_typescript@5.9.3/node_modules/expo-splash-screen/ios`)"
@@ -2431,6 +2434,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/expo-modules-core@55.0.18_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-config@0_rtptnyrxbm6irczkvu2gcvmzui/node_modules/expo-modules-core"
   ExpoModulesJSI:
     :path: "../../node_modules/.pnpm/expo-modules-core@55.0.18_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-config@0_rtptnyrxbm6irczkvu2gcvmzui/node_modules/expo-modules-core"
+  ExpoNotifications:
+    :path: "../../node_modules/.pnpm/expo-notifications@55.0.14_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+m_yxn6zpf2izuarls35ydlpgtinm/node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../../node_modules/.pnpm/expo-router@55.0.8_p7okv376by6y54ns7j3hlhwhcq/node_modules/expo-router/ios"
   ExpoSecureStore:
@@ -2627,6 +2632,7 @@ SPEC CHECKSUMS:
   ExpoLogBox: adb715d4d0882d0f2d6d4d37eaeda1db51b1f93f
   ExpoModulesCore: 546b540cc25fc0acc52c5026602607ab87ea3ca0
   ExpoModulesJSI: ac4e45951c63c45631bf7969cb621f82d1ed6330
+  ExpoNotifications: edd5c66352963386269d28d6d6f5406a598e704e
   ExpoRouter: e1d7631825e77421c752b7316458245a07fe1b88
   ExpoSecureStore: 25cd1fed833427c6ebf915f7c82651256da6745e
   ExpoSplashScreen: e3672db2d145e62208d4b761671f4fca1d4ef126

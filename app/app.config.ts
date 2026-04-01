@@ -1,28 +1,42 @@
-import { ExpoConfig, ConfigContext } from 'expo/config';
+// @ts-nocheck — keep syntax Expo/EAS can evaluate without full TS (see expo.config docs).
+// Keep this file valid as plain JS after TS stripping: no `import type`, no param/return
+// annotations, no `as const`, no `new Set<string>` (generics break non-TS parsers).
 
 /**
- * Native URL schemes for `scheme` — must mirror `GOOGLE_*_URL_SCHEME` defaults in `config.ts`.
- * (Do not `import` from `config.ts` here: Expo emits `app.config.js` only; `require('./config')`
- * looks for `config.js` and fails at build time.)
+ * Duplicated from `googleIosUrlScheme.ts` — Expo loads only `app.config.*` here.
+ * @param {string} clientId
  */
-function appUrlSchemes(): string[] {
-  const ios =
-    process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ??
-    'com.googleusercontent.apps.377020404904-aenb5m2ft60mv60tu8ign41ptvo1bn83';
+function googleIosUrlSchemeFromClientId(clientId) {
+  const suffix = '.apps.googleusercontent.com';
+  if (!clientId || !clientId.endsWith(suffix)) {
+    return '';
+  }
+  const idPart = clientId.slice(0, -suffix.length);
+  return `com.googleusercontent.apps.${idPart}`;
+}
+
+function appUrlSchemes() {
+  const iosExplicit = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ?? '';
+  const iosFromClient = googleIosUrlSchemeFromClientId(
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? ''
+  );
+  const ios = iosExplicit || iosFromClient;
   const android = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_URL_SCHEME ?? '';
-  const set = new Set<string>(['fformcare', 'care', ios]);
+  const set = new Set(['fformcare', 'care']);
+  if (ios) set.add(ios);
   if (android) set.add(android);
   return [...set];
 }
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+const APP_VERSION = '1.0.0';
+
+export default ({ config }) => ({
   ...config,
   name: 'Care',
   slug: 'care',
-  version: '1.0.0',
+  version: APP_VERSION,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  /** Deep linking + OAuth redirects. First entry is the default app scheme. */
   scheme: appUrlSchemes(),
   userInterfaceStyle: 'light',
   splash: {
@@ -61,6 +75,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-secure-store',
+    'expo-notifications',
     'expo-apple-authentication',
     [
       'expo-build-properties',
@@ -78,10 +93,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: process.env.EXPO_PROJECT_ID,
     },
+    care: {
+      distribution: 'development-build',
+    },
   },
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
+  runtimeVersion: APP_VERSION,
   updates: {
     url: 'https://u.expo.dev/' + process.env.EXPO_PROJECT_ID,
   },

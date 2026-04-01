@@ -1,4 +1,4 @@
-// Prisma schema for Care
+// Prisma schema for Care — `auth` and `app` PostgreSQL schemas
 // Run: pnpm --filter @care/api db:migrate:dev
 
 generator client {
@@ -8,71 +8,127 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["auth", "app"]
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth schema ─────────────────────────────────────────────────────────────
 
-model User {
-  id          String   @id @default(cuid())
-  email       String?  @unique
-  phone       String?  @unique
-  name        String
-  avatarUrl   String?
-  passwordHash String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum OAuthProvider {
+  google
+  apple
+  github
 
-  authProviders OAuthAccount[]
-  memberships   CircleMember[]
-  assignedTasks Task[]         @relation("AssignedTasks")
-  completedTasks Task[]        @relation("CompletedTasks")
+  @@schema("auth")
 }
 
-model OAuthAccount {
-  id             String @id @default(cuid())
-  userId         String
-  provider       String  // "google" | "apple"
-  providerUserId String
-  accessToken    String?
-  refreshToken   String?
+model OAuthIdentity {
+  id         String        @id @default(cuid())
+  userId     String        @map("user_id")
+  provider   OAuthProvider
+  providerId String        @map("provider_id")
+  email      String?
+  linkedAt   DateTime      @default(now()) @map("linked_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerUserId])
-  @@unique([provider, userId]) // one account per provider per user
+  @@unique([provider, providerId])
+  @@map("oauth_identities")
+  @@schema("auth")
 }
 
-// ── Care Circles ──────────────────────────────────────────────────────────────
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  deviceId  String?   @map("device_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
 
-model Circle {
-  id           String @id @default(cuid())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+  @@schema("auth")
+}
+
+// ── App schema ───────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String?  @unique
+  phone        String?  @unique
   name         String
-  description  String?
-  heartName    String  // The person/pet being cared for
-  heartAvatar  String?
+  avatarUrl    String?
+  passwordHash String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  oauthIdentities OAuthIdentity[]
+  refreshTokens   RefreshToken[]
+  deviceTokens    DeviceToken[]
+  memberships     CircleMember[]
+  assignedTasks   Task[]         @relation("AssignedTasks")
+  completedTasks  Task[]         @relation("CompletedTasks")
+
+  @@map("User")
+  @@schema("app")
+}
+
+enum DevicePlatform {
+  ios
+  android
+
+  @@schema("app")
+}
+
+model DeviceToken {
+  id        String         @id @default(cuid())
+  userId    String         @map("user_id")
+  token     String
+  platform  DevicePlatform
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@map("device_tokens")
+  @@schema("app")
+}
+
+model Circle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  heartName   String
+  heartAvatar String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   members  CircleMember[]
   plans    Plan[]
   concerns Concern[]
   tasks    Task[]
+
+  @@map("Circle")
+  @@schema("app")
 }
 
 model CircleMember {
-  id        String   @id @default(cuid())
-  circleId  String
-  userId    String
-  role      String   // "organizer" | "caregiver" | "supporter" | "care_recipient" | "professional"
-  joinedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  circleId String
+  userId   String
+  role     String
+  joinedAt DateTime @default(now())
 
   circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([circleId, userId])
+  @@map("CircleMember")
+  @@schema("app")
 }
-
-// ── Plans, Concerns, Tasks ────────────────────────────────────────────────────
 
 model Plan {
   id          String   @id @default(cuid())
@@ -85,6 +141,9 @@ model Plan {
   circle   Circle    @relation(fields: [circleId], references: [id], onDelete: Cascade)
   tasks    Task[]
   concerns Concern[]
+
+  @@map("Plan")
+  @@schema("app")
 }
 
 model Concern {
@@ -100,27 +159,33 @@ model Concern {
   circle Circle  @relation(fields: [circleId], references: [id], onDelete: Cascade)
   plan   Plan?   @relation(fields: [planId], references: [id])
   tasks  Task[]
+
+  @@map("Concern")
+  @@schema("app")
 }
 
 model Task {
-  id                 String    @id @default(cuid())
-  circleId           String
-  planId             String?
-  concernId          String?
-  title              String
-  description        String?
-  assignedToUserId   String?
-  status             String    @default("pending") // "pending" | "in_progress" | "completed" | "skipped"
-  dueAt              DateTime?
-  completedAt        DateTime?
-  completedByUserId  String?
-  notes              String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  circleId          String
+  planId            String?
+  concernId         String?
+  title             String
+  description       String?
+  assignedToUserId  String?
+  status            String    @default("pending")
+  dueAt             DateTime?
+  completedAt       DateTime?
+  completedByUserId String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  circle      Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  plan        Plan?    @relation(fields: [planId], references: [id])
+  circle      Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  plan        Plan?  @relation(fields: [planId], references: [id])
   concern     Concern? @relation(fields: [concernId], references: [id])
-  assignedTo  User?    @relation("AssignedTasks", fields: [assignedToUserId], references: [id])
-  completedBy User?    @relation("CompletedTasks", fields: [completedByUserId], references: [id])
+  assignedTo  User?  @relation("AssignedTasks", fields: [assignedToUserId], references: [id])
+  completedBy User?  @relation("CompletedTasks", fields: [completedByUserId], references: [id])
+
+  @@map("Task")
+  @@schema("app")
 }

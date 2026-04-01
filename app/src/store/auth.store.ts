@@ -1,17 +1,46 @@
 import { create } from 'zustand';
-import { api, setToken, clearToken } from '../lib/api';
+import {
+  api,
+  setTokens,
+  clearTokens,
+  registerDeviceTokenWithApi,
+} from '../lib/api';
+import { getOrCreateDeviceId } from '../lib/deviceId';
+import { getExpoPushRegistration } from '../lib/pushToken';
 import type { User } from '@care/shared/types';
 import type { ApiResponse } from '@care/shared/types';
+
+type AuthTokensResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: User;
+};
+
+async function syncPushTokenToApi(): Promise<void> {
+  const reg = await getExpoPushRegistration();
+  if (!reg) {
+    return;
+  }
+  try {
+    await registerDeviceTokenWithApi(reg.token, reg.platform);
+  } catch {
+    // Push registration is best-effort (permissions, simulator, etc.).
+  }
+}
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   isInitialized: boolean;
 
-  // Actions
   initialize: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  loginWithOAuth: (provider: string, credential: Record<string, unknown>) => Promise<void>;
+  loginWithGoogle: (params: {
+    code: string;
+    codeVerifier: string;
+    redirectUri: string;
+  }) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -25,6 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await api.get<ApiResponse<User>>('/auth/me');
       set({ user: response.data, isInitialized: true });
+      await syncPushTokenToApi();
     } catch {
       set({ user: null, isInitialized: true });
     }
@@ -33,27 +63,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loginWithEmail: async (email, password) => {
     set({ isLoading: true });
     try {
-      const response = await api.post<{ token: string; user: User }>('/auth/login', {
+      const deviceId = await getOrCreateDeviceId();
+      const response = await api.post<AuthTokensResponse>('/auth/login', {
         email,
         password,
+        deviceId,
       });
-      await setToken(response.token);
+      await setTokens(response.accessToken, response.refreshToken);
       set({ user: response.user, isLoading: false });
+      await syncPushTokenToApi();
     } catch (err) {
       set({ isLoading: false });
       throw err;
     }
   },
 
-  loginWithOAuth: async (provider, credential) => {
+  loginWithGoogle: async ({ code, codeVerifier, redirectUri }) => {
     set({ isLoading: true });
     try {
-      const response = await api.post<{ token: string; user: User }>('/auth/oauth', {
-        provider,
-        ...credential,
+      const deviceId = await getOrCreateDeviceId();
+      const response = await api.post<AuthTokensResponse>('/auth/google', {
+        code,
+        codeVerifier,
+        redirectUri,
+        deviceId,
       });
-      await setToken(response.token);
+      await setTokens(response.accessToken, response.refreshToken);
       set({ user: response.user, isLoading: false });
+      await syncPushTokenToApi();
     } catch (err) {
       set({ isLoading: false });
       throw err;
@@ -63,13 +100,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (email, password, name) => {
     set({ isLoading: true });
     try {
-      const response = await api.post<{ token: string; user: User }>('/auth/register', {
+      const deviceId = await getOrCreateDeviceId();
+      const response = await api.post<AuthTokensResponse>('/auth/register', {
         email,
         password,
         name,
+        deviceId,
       });
-      await setToken(response.token);
+      await setTokens(response.accessToken, response.refreshToken);
       set({ user: response.user, isLoading: false });
+      await syncPushTokenToApi();
     } catch (err) {
       set({ isLoading: false });
       throw err;
@@ -77,7 +117,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await clearToken();
+    const deviceId = await getOrCreateDeviceId();
+    try {
+      await api.post('/auth/logout', { deviceId });
+    } catch {
+      // still clear local session
+    }
+    await clearTokens();
     set({ user: null });
   },
 }));

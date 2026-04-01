@@ -1,6 +1,6 @@
 export type UserRole = 'organizer' | 'caregiver' | 'supporter' | 'care_recipient' | 'professional';
 
-export type AuthProvider = 'google' | 'apple' | 'email';
+export type AuthProvider = 'google' | 'apple' | 'github' | 'email';
 
 export interface User {
   id: string;

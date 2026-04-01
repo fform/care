@@ -1,8 +1,9 @@
+
 [build]
-buildCommand = "true"
+buildCommand = "pnpm --filter @care/api build"
 
 [deploy]
-startCommand = "pnpm --filter @care/api build && pnpm --filter @care/api db:migrate && pnpm --filter @care/api start"
+startCommand = "pnpm --filter @care/api db:migrate && pnpm --filter @care/api start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

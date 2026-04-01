@@ -1,11 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { authRouter } from './routes/auth';
+import { authRouter, verifyJwt } from './auth';
 import { circlesRouter } from './routes/circles';
 import { tasksRouter } from './routes/tasks';
 import { errorHandler } from './middleware/error';
-import { requireAuth } from './middleware/auth';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -22,8 +21,8 @@ app.get('/health', (_req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/auth', authRouter);
-app.use('/circles', requireAuth, circlesRouter);
-app.use('/tasks', requireAuth, tasksRouter);
+app.use('/circles', verifyJwt, circlesRouter);
+app.use('/tasks', verifyJwt, tasksRouter);
 
 // ── Error handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);
