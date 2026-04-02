@@ -1,83 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
 import { MotiView } from 'moti';
 import { GoogleLogo, AppleLogo, Envelope, Lock, ArrowRight } from 'phosphor-react-native';
 import { Button, Input, Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
-import { googleOAuthUrlScheme, signInWithApple } from '@/lib/auth';
-import config from '../../config';
+import { signInWithApple } from '@/lib/auth';
+import config, { APP_URL_SCHEME } from '../../config';
 
-/** Google: auth code + PKCE only — server exchanges the code (`POST /auth/google`). */
+/** Google: API runs OAuth + PKCE; app completes via handoff JWT (`POST /auth/google/handoff`). */
 function GoogleOAuthButton({
   onError,
 }: {
   onError: (message: string) => void;
 }) {
-  const redirectUri = useMemo(
+  const redirectUrl = useMemo(
     () =>
       AuthSession.makeRedirectUri({
-        scheme: googleOAuthUrlScheme(),
-        path: 'oauth2redirect',
+        scheme: APP_URL_SCHEME,
+        path: 'oauth/google',
       }),
     []
   );
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: config.oauth.google.iosClientId,
-    androidClientId: config.oauth.google.androidClientId || undefined,
-    redirectUri,
-    scopes: ['openid', 'profile', 'email'],
-    usePKCE: true,
-    shouldAutoExchangeCode: false,
-  });
+  const { loginWithGoogleHandoff } = useAuthStore();
 
-  const { loginWithGoogle } = useAuthStore();
-  const handledSuccess = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'cancel' || response.type === 'dismiss') return;
-    if (response.type === 'error') {
-      const err = response.error as { message?: string } | undefined;
-      onError(err?.message ?? 'Google sign-in failed');
-      return;
-    }
-    if (response.type !== 'success' || !response.params?.code) return;
-    const code = response.params.code as string;
-    const codeVerifier = request?.codeVerifier;
-    if (!codeVerifier) {
-      onError('Missing PKCE verifier');
-      return;
-    }
-    if (handledSuccess.current === code) return;
-    handledSuccess.current = code;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        await loginWithGoogle({
-          code,
-          codeVerifier,
-          redirectUri,
-        });
-        if (!cancelled) router.replace('/(tabs)');
-      } catch (e: unknown) {
-        if (!cancelled) onError(e instanceof Error ? e.message : 'Something went wrong');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [response, request, loginWithGoogle, redirectUri, onError]);
-
-  const disabled =
-    !request ||
-    (Platform.OS === 'android' && !config.oauth.google.androidClientId) ||
-    (Platform.OS === 'ios' && !config.oauth.google.iosClientId);
+  const disabled = Platform.OS === 'web' || !config.apiUrl;
 
   return (
     <Pressable
@@ -85,7 +37,38 @@ function GoogleOAuthButton({
       disabled={disabled}
       onPress={() => {
         onError('');
-        void promptAsync();
+        void (async () => {
+          try {
+            const result = await WebBrowser.openAuthSessionAsync(
+              `${config.apiUrl}/auth/google`,
+              redirectUrl
+            );
+            if (result.type === 'cancel' || result.type === 'dismiss') {
+              return;
+            }
+            if (result.type !== 'success' || !('url' in result) || !result.url) {
+              onError('Google sign-in did not complete');
+              return;
+            }
+            const parsed = Linking.parse(result.url);
+            const oauthErr = parsed.queryParams?.error;
+            if (oauthErr !== undefined && oauthErr !== null) {
+              const msg = Array.isArray(oauthErr) ? oauthErr[0] : String(oauthErr);
+              onError(msg || 'Google authorization failed');
+              return;
+            }
+            const handoffRaw = parsed.queryParams?.handoff;
+            const handoff = Array.isArray(handoffRaw) ? handoffRaw[0] : handoffRaw;
+            if (!handoff || typeof handoff !== 'string') {
+              onError('Google sign-in did not return a session');
+              return;
+            }
+            await loginWithGoogleHandoff(handoff);
+            router.replace('/(tabs)');
+          } catch (e: unknown) {
+            onError(e instanceof Error ? e.message : 'Something went wrong');
+          }
+        })();
       }}
     >
       <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />
@@ -105,12 +88,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { loginWithEmail, register, isLoading } = useAuthStore();
-  const googleConfigured =
-    Platform.OS === 'ios'
-      ? !!config.oauth.google.iosClientId
-      : Platform.OS === 'android'
-        ? !!config.oauth.google.androidClientId
-        : false;
+  const googleConfigured = Platform.OS !== 'web' && !!config.apiUrl;
 
   async function handleEmailSubmit() {
     setError(null);
@@ -176,7 +154,11 @@ export default function LoginScreen() {
           <Pressable
             style={styles.socialButton}
             onPress={() =>
-              setError('Google sign-in is not configured (set OAuth client IDs in config / env).')
+              setError(
+                Platform.OS === 'web'
+                  ? 'Google sign-in from the app uses the native build.'
+                  : 'Google sign-in requires the API URL (EXPO_PUBLIC_API_URL).'
+              )
             }
           >
             <GoogleLogo size={20} weight="bold" color={colors.textPrimary} />

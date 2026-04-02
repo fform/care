@@ -1,8 +1,21 @@
+# Railway config-as-code for the web (Next.js) service.
+# In the Railway service settings, set the config file path to this file (from repo root): web/railway.toml
+# See ARCHITECTURE.md → Infrastructure → Railway.
+
 [build]
+builder = "RAILPACK"
 buildCommand = "pnpm --filter @care/web build"
+watchPatterns = [
+  "web/**",
+  "shared/**",
+  "pnpm-lock.yaml",
+  "package.json",
+  "pnpm-workspace.yaml",
+]
 
 [deploy]
-startCommand = "pnpm --filter @care/web start"
+# Resolves to @care/web via RAILWAY_SERVICE_NAME / CARE_SERVICE (scripts/railway-root-start.mjs).
+startCommand = "pnpm start"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

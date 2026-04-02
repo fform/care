@@ -3,9 +3,12 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { prisma } from '../lib/prisma';
 
-const JWT_SECRET = new TextEncoder().encode(
+/** Shared HS256 key for access tokens and OAuth handoff/state JWTs. */
+export const JWT_SECRET_KEY = new TextEncoder().encode(
   process.env.JWT_SECRET ?? 'dev-secret-change-in-production'
 );
+
+const JWT_SECRET = JWT_SECRET_KEY;
 
 export const ACCESS_TOKEN_TTL_SEC = 15 * 60;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;

@@ -36,11 +36,7 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (params: {
-    code: string;
-    codeVerifier: string;
-    redirectUri: string;
-  }) => Promise<void>;
+  loginWithGoogleHandoff: (handoffToken: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -78,14 +74,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithGoogle: async ({ code, codeVerifier, redirectUri }) => {
+  loginWithGoogleHandoff: async (handoffToken) => {
     set({ isLoading: true });
     try {
       const deviceId = await getOrCreateDeviceId();
-      const response = await api.post<AuthTokensResponse>('/auth/google', {
-        code,
-        codeVerifier,
-        redirectUri,
+      const response = await api.post<AuthTokensResponse>('/auth/google/handoff', {
+        handoffToken,
         deviceId,
       });
       await setTokens(response.accessToken, response.refreshToken);

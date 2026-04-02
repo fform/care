@@ -1,13 +1,14 @@
 import { Router, type NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { OAuthProvider, DevicePlatform, Prisma } from '@prisma/client';
+import { DevicePlatform, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { verifyGoogleAuthCode } from './providers/google';
 import {
-  findOrCreateUserFromOAuth,
-  getUserResponseForApi,
-} from './oauthUserService';
+  handleGoogleOAuthCallback,
+  handleGoogleOAuthHandoff,
+  handleGoogleOAuthStart,
+} from './googleBrowserOAuth';
+import { getUserResponseForApi } from './oauthUserService';
 import {
   ACCESS_TOKEN_TTL_SEC,
   issueRefreshToken,
@@ -23,14 +24,6 @@ function nextCaught(next: NextFunction, err: unknown): void {
 export const authRouter = Router();
 
 const BCRYPT_ROUNDS = 12;
-
-const googleBodySchema = z.object({
-  code: z.string().min(1),
-  codeVerifier: z.string().min(1),
-  // Native OAuth redirects use custom schemes, not always `z.string().url()`-compatible.
-  redirectUri: z.string().min(1),
-  deviceId: z.string().optional(),
-});
 
 const refreshBodySchema = z.object({
   refreshToken: z.string().min(1),
@@ -59,51 +52,15 @@ const loginSchema = z.object({
   deviceId: z.string().optional(),
 });
 
-/** Public: exchange Google auth code (PKCE) server-side; issues our JWTs only. */
-authRouter.post('/google', async (req, res, next) => {
-  try {
-    const body = googleBodySchema.parse(req.body);
-    const profile = await verifyGoogleAuthCode({
-      code: body.code,
-      codeVerifier: body.codeVerifier,
-      redirectUri: body.redirectUri,
-    });
+/**
+ * Google Sign-In (web OAuth client): browser hits the API, which runs PKCE + code exchange,
+ * then deep-links back to the app with a short-lived handoff JWT.
+ */
+authRouter.get('/google', handleGoogleOAuthStart);
+authRouter.get('/google/callback', handleGoogleOAuthCallback);
 
-    const user = await findOrCreateUserFromOAuth({
-      provider: OAuthProvider.google,
-      providerId: profile.sub,
-      email: profile.email,
-      name: profile.name,
-      avatarUrl: profile.picture ?? null,
-    });
-
-    const accessToken = await signAccessToken(user.id);
-    const { token: refreshToken, expiresAt } = await issueRefreshToken(
-      user.id,
-      body.deviceId
-    );
-
-    const userDto = await getUserResponseForApi(user.id);
-    if (!userDto) {
-      res.status(500).json({ error: 'User not found after sign-in', status: 500 });
-      return;
-    }
-
-    res.status(200).json({
-      accessToken,
-      refreshToken,
-      expiresIn: ACCESS_TOKEN_TTL_SEC,
-      refreshExpiresAt: expiresAt.toISOString(),
-      user: userDto,
-    });
-  } catch (err: unknown) {
-    if (err instanceof z.ZodError) {
-      res.status(400).json({ error: 'Invalid request', status: 400, details: err.flatten() });
-      return;
-    }
-    nextCaught(next, err);
-  }
-});
+/** Public: exchange handoff JWT from `GET /auth/google/callback` redirect for session tokens. */
+authRouter.post('/google/handoff', handleGoogleOAuthHandoff);
 
 /** Public: refresh token rotation. */
 authRouter.post('/refresh', async (req, res, next) => {

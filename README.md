@@ -33,4 +33,8 @@ pnpm ship:api     # Deploy API only
 pnpm ship:web     # Deploy marketing site only
 ```
 
-All commands pull secrets from 1Password automatically via direnv.
+`pnpm ship` / `ship:api` / `ship:web` require a **`.env` file at the repository root** (not only under `app/`). They run `op run --env-file=.env` so Railway tokens and other secrets resolve from 1Password references in that file.
+
+Railway build/start/watch paths for each deployable service live in **`api/railway.toml`** and **`web/railway.toml`** (see [ARCHITECTURE.md](./ARCHITECTURE.md) § Railway).
+
+Other commands pull secrets from 1Password automatically via direnv where configured.

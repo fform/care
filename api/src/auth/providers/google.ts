@@ -7,11 +7,13 @@ export type GoogleIdTokenPayload = {
   picture?: string;
 };
 
+/** Web application client ID (must match Authorized redirect URIs in Google Cloud). */
 const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET || undefined;
 
 /**
  * Exchange authorization code (PKCE) for tokens, verify `id_token`, return user fields.
+ * Used with `redirectUri` = `{origin from RAILWAY_PUBLIC_DOMAIN}/auth/google/callback`.
  * Google access/refresh tokens are not returned — they stay inside this function.
  */
 export async function verifyGoogleAuthCode(params: {

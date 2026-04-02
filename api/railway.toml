@@ -1,9 +1,22 @@
+# Railway config-as-code for the API service (build + deploy + watch paths).
+# In the Railway service settings, set the config file path to this file (from repo root): api/railway.toml
+# See ARCHITECTURE.md → Infrastructure → Railway.
 
 [build]
+builder = "RAILPACK"
 buildCommand = "pnpm --filter @care/api build"
+watchPatterns = [
+  "api/**",
+  "shared/**",
+  "pnpm-lock.yaml",
+  "package.json",
+  "pnpm-workspace.yaml",
+]
 
 [deploy]
-startCommand = "pnpm --filter @care/api db:migrate && pnpm --filter @care/api start"
+preDeployCommand = ["pnpm --filter @care/api db:migrate"]
+# Same root entry as `web`: `scripts/railway-root-start.mjs` (see root package.json "start").
+startCommand = "pnpm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
