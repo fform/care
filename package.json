@@ -13,8 +13,8 @@
     "build:web": "pnpm --filter @care/web build",
     "start:web": "pnpm --filter @care/web start",
     "ios": "pnpm --filter @care/app ios",
-    "ship:api": "node scripts/check-root-env.mjs && pnpm --filter @care/api type-check && op run --env-file=.env -- railway up --service api --detach",
-    "ship:web": "node scripts/check-root-env.mjs && pnpm --filter @care/web type-check && op run --env-file=.env -- railway up --service web --detach",
+    "ship:api": "pnpm --filter @care/api type-check && railway up --service api --detach",
+    "ship:web": "pnpm --filter @care/web type-check && railway up --service web --detach",
     "ship": "pnpm ship:api && pnpm ship:web",
     "start": "node scripts/railway-root-start.mjs"
   },
