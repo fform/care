@@ -15,7 +15,7 @@ import {
   rotateRefreshToken,
   signAccessToken,
 } from './tokens';
-import { verifyJwt, type AuthenticatedRequest } from './middleware';
+import { verifyJwt, getUserId } from './middleware';
 
 function nextCaught(next: NextFunction, err: unknown): void {
   next(err instanceof Error ? err : new Error(String(err)));
@@ -175,7 +175,7 @@ authRouter.post('/login', async (req, res, next) => {
 /** Requires access JWT. */
 authRouter.get('/me', verifyJwt, async (req, res, next) => {
   try {
-    const { userId } = req as AuthenticatedRequest;
+    const userId = getUserId(req);
     const userDto = await getUserResponseForApi(userId);
     if (!userDto) {
       res.status(404).json({ error: 'User not found', status: 404 });
@@ -190,7 +190,7 @@ authRouter.get('/me', verifyJwt, async (req, res, next) => {
 /** Requires access JWT. */
 authRouter.post('/logout', verifyJwt, async (req, res, next) => {
   try {
-    const { userId } = req as AuthenticatedRequest;
+    const userId = getUserId(req);
     const body = logoutBodySchema.parse(req.body ?? {});
     const now = new Date();
     if (body.deviceId) {
@@ -213,7 +213,7 @@ authRouter.post('/logout', verifyJwt, async (req, res, next) => {
 /** Requires access JWT. Upserts push token for (user, token). */
 authRouter.post('/device-token', verifyJwt, async (req, res, next) => {
   try {
-    const { userId } = req as AuthenticatedRequest;
+    const userId = getUserId(req);
     const body = deviceTokenBodySchema.parse(req.body);
     const platform =
       body.platform === 'ios' ? DevicePlatform.ios : DevicePlatform.android;

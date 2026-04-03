@@ -1,2 +1,2 @@
 export { authRouter } from './routes';
-export { verifyJwt, type AuthenticatedRequest } from './middleware';
+export { verifyJwt, getUserId, type AuthenticatedRequest } from './middleware';

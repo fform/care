@@ -4,10 +4,12 @@
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotiView } from 'moti';
+import { useRouter } from 'expo-router';
 import { Plus } from 'phosphor-react-native';
 import { Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useCirclesStore } from '@/store/circles.store';
+import { useNavigationStore } from '@/store/navigation.store';
 import type { Circle } from '@care/shared/types';
 
 // Derive a stable color from a string (for member avatars)
@@ -21,7 +23,7 @@ function avatarColor(seed: string): string {
 const MOCK_CIRCLES: Circle[] = [
   {
     id: '1', name: "Mom's Care", description: '3 siblings + home aide',
-    heartName: 'Mom', heartAvatarUrl: null, createdAt: '', updatedAt: '',
+    heartName: 'Mom', heartAvatarUrl: null, color: '#D4916E', createdAt: '', updatedAt: '',
     members: [
       { userId: 'a', circleId: '1', role: 'organizer', joinedAt: '', user: { id: 'a', name: 'Sarah', avatarUrl: null } },
       { userId: 'b', circleId: '1', role: 'caregiver', joinedAt: '', user: { id: 'b', name: 'David', avatarUrl: null } },
@@ -31,7 +33,7 @@ const MOCK_CIRCLES: Circle[] = [
   },
   {
     id: '2', name: 'The Kids', description: 'Both parents + grandma',
-    heartName: 'The Kids', heartAvatarUrl: null, createdAt: '', updatedAt: '',
+    heartName: 'The Kids', heartAvatarUrl: null, color: '#6B9E7A', createdAt: '', updatedAt: '',
     members: [
       { userId: 'a', circleId: '2', role: 'organizer', joinedAt: '', user: { id: 'a', name: 'Sarah', avatarUrl: null } },
       { userId: 'e', circleId: '2', role: 'caregiver', joinedAt: '', user: { id: 'e', name: 'Tom', avatarUrl: null } },
@@ -39,7 +41,7 @@ const MOCK_CIRCLES: Circle[] = [
   },
   {
     id: '3', name: 'Buster', description: 'You + Alex',
-    heartName: 'Buster', heartAvatarUrl: null, createdAt: '', updatedAt: '',
+    heartName: 'Buster', heartAvatarUrl: null, color: '#B8724F', createdAt: '', updatedAt: '',
     members: [
       { userId: 'a', circleId: '3', role: 'organizer', joinedAt: '', user: { id: 'a', name: 'Sarah', avatarUrl: null } },
       { userId: 'f', circleId: '3', role: 'caregiver', joinedAt: '', user: { id: 'f', name: 'Alex', avatarUrl: null } },
@@ -51,6 +53,8 @@ const MOCK_CIRCLES: Circle[] = [
 const MOCK_CONCERN_COUNTS: Record<string, number> = { '1': 2, '2': 0, '3': 1 };
 
 export default function CirclesScreen() {
+  const router = useRouter();
+  const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
   const storeCircles = useCirclesStore((s) => s.circles);
   const circles = storeCircles.length > 0 ? storeCircles : MOCK_CIRCLES;
 
@@ -77,7 +81,14 @@ export default function CirclesScreen() {
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'spring', damping: 20, delay: i * 60 }}
           >
-            <CircleCard circle={circle} concernCount={MOCK_CONCERN_COUNTS[circle.id] ?? 0} />
+            <CircleCard
+              circle={circle}
+              concernCount={MOCK_CONCERN_COUNTS[circle.id] ?? 0}
+              onOpen={() => {
+                setFocusedCircleId(circle.id);
+                router.push('/');
+              }}
+            />
           </MotiView>
         ))}
       </ScrollView>
@@ -85,12 +96,20 @@ export default function CirclesScreen() {
   );
 }
 
-function CircleCard({ circle, concernCount }: { circle: Circle; concernCount: number }) {
+function CircleCard({
+  circle,
+  concernCount,
+  onOpen,
+}: {
+  circle: Circle;
+  concernCount: number;
+  onOpen: () => void;
+}) {
   const { name, description, members } = circle;
   const hasConcerns = concernCount > 0;
 
   return (
-    <Pressable style={styles.card}>
+    <Pressable style={styles.card} onPress={onOpen}>
       <View style={styles.cardTop}>
         <Text style={styles.circleName}>{name}</Text>
         <View style={[styles.badge, hasConcerns ? styles.badgeWarning : styles.badgeSuccess]}>

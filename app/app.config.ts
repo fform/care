@@ -21,6 +21,9 @@ export default ({ config }) => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.fform.care',
+    config: {
+      usesNonExemptEncryption: false
+    },
     buildNumber: '1',
     ...(process.env.APPLE_TEAM_ID
       ? { appleTeamId: process.env.APPLE_TEAM_ID }

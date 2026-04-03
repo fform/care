@@ -3,13 +3,15 @@
  * "What do I need to care about right now?"
  */
 import { useEffect } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotiView } from 'moti';
-import { Warning } from 'phosphor-react-native';
+import { useRouter } from 'expo-router';
+import { Warning, User } from 'phosphor-react-native';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
 import { useCirclesStore } from '@/store/circles.store';
+import { useNavigationStore } from '@/store/navigation.store';
 import { Text } from '@care/shared/components';
 
 const MOCK_CONCERNS = [
@@ -29,12 +31,21 @@ const MOCK_UPDATES = [
 ];
 
 export default function TodayScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { fetchCircles } = useCirclesStore();
+  const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
+  const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
+  const { fetchCircles, fetchTasks } = useCirclesStore();
 
   useEffect(() => {
     fetchCircles();
   }, []);
+
+  useEffect(() => {
+    if (focusedCircleId) {
+      fetchTasks(focusedCircleId);
+    }
+  }, [focusedCircleId]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'Sarah';
 
@@ -52,8 +63,30 @@ export default function TodayScreen() {
           transition={{ type: 'spring', damping: 20 }}
           style={styles.header}
         >
-          <Text style={styles.greeting}>{getGreeting()}, {firstName}</Text>
-          <Text style={styles.date}>{formatDate(new Date())}</Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>{getGreeting()}, {firstName}</Text>
+              <Text style={styles.date}>{formatDate(new Date())}</Text>
+            </View>
+            <View style={styles.headerActions}>
+              {focusedCircleId ? (
+                <Pressable
+                  onPress={() => setFocusedCircleId(null)}
+                  style={styles.exitFocus}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.exitFocusText}>All circles</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => router.push('/profile')}
+                accessibilityRole="button"
+                hitSlop={12}
+              >
+                <User size={24} color={colors.textPrimary} weight="duotone" />
+              </Pressable>
+            </View>
+          </View>
         </MotiView>
 
         {/* Concerns */}
@@ -133,6 +166,27 @@ const styles = StyleSheet.create({
   },
 
   header: { gap: spacing[1] },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing[3],
+  },
+  headerText: { flex: 1, gap: spacing[1] },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  exitFocus: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing[3],
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  exitFocusText: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_600SemiBold',
+    color: colors.secondary,
+  },
   greeting: {
     fontSize: 26,
     fontFamily: 'OpenSans_700Bold',

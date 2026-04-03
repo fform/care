@@ -70,6 +70,9 @@ model User {
   memberships     CircleMember[]
   assignedTasks   Task[]         @relation("AssignedTasks")
   completedTasks  Task[]         @relation("CompletedTasks")
+  slotCompletions TaskSlotCompletion[] @relation("SlotCompleter")
+  chatMessages    ChatMessage[]
+  aiSuggestions   AiSuggestedAction[]
 
   @@map("User")
   @@schema("app")
@@ -103,13 +106,19 @@ model Circle {
   description String?
   heartName   String
   heartAvatar String?
+  /// UI accent (hex), e.g. #6B8F71
+  color       String   @default("#6B8F71")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members  CircleMember[]
-  plans    Plan[]
-  concerns Concern[]
-  tasks    Task[]
+  members      CircleMember[]
+  plans        Plan[]
+  concerns     Concern[]
+  tasks        Task[]
+  chatThreads  ChatThread[]
+  schedules    Schedule[]
+  invites      CircleInvite[]
+  aiSuggestions AiSuggestedAction[]
 
   @@map("Circle")
   @@schema("app")
@@ -180,12 +189,125 @@ model Task {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  circle      Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  plan        Plan?  @relation(fields: [planId], references: [id])
-  concern     Concern? @relation(fields: [concernId], references: [id])
-  assignedTo  User?  @relation("AssignedTasks", fields: [assignedToUserId], references: [id])
-  completedBy User?  @relation("CompletedTasks", fields: [completedByUserId], references: [id])
+  /// When true, completions are tracked per day + slot in TaskSlotCompletion (e.g. feed 2× daily).
+  isRecurring         Boolean  @default(false)
+  /// JSON string[] of "HH:mm" times in circle-local interpretation (e.g. ["08:00","17:00"]).
+  recurrenceSlotTimes Json?
+
+  circle          Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  plan            Plan?  @relation(fields: [planId], references: [id])
+  concern         Concern? @relation(fields: [concernId], references: [id])
+  assignedTo      User?  @relation("AssignedTasks", fields: [assignedToUserId], references: [id])
+  completedBy     User?  @relation("CompletedTasks", fields: [completedByUserId], references: [id])
+  slotCompletions TaskSlotCompletion[]
 
   @@map("Task")
+  @@schema("app")
+}
+
+model TaskSlotCompletion {
+  id                String   @id @default(cuid())
+  taskId            String
+  date              DateTime @db.Date
+  slotIndex         Int
+  completedAt       DateTime @default(now())
+  completedByUserId String
+
+  task        Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  completedBy User @relation("SlotCompleter", fields: [completedByUserId], references: [id])
+
+  @@unique([taskId, date, slotIndex])
+  @@map("TaskSlotCompletion")
+  @@schema("app")
+}
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  circleId  String
+  title     String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  circle   Circle        @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("ChatThread")
+  @@schema("app")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  threadId  String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@map("ChatMessage")
+  @@schema("app")
+}
+
+model Schedule {
+  id          String    @id @default(cuid())
+  circleId    String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@map("Schedule")
+  @@schema("app")
+}
+
+enum InviteKind {
+  link
+  direct_email
+  direct_phone
+
+  @@schema("app")
+}
+
+model CircleInvite {
+  id               String     @id @default(cuid())
+  circleId         String
+  secretCode       String     @unique
+  inviterUserId    String
+  kind             InviteKind
+  invitedEmail     String?
+  invitedPhone     String?
+  expiresAt        DateTime?
+  consumedAt       DateTime?
+  consumedByUserId String?
+  createdAt        DateTime   @default(now())
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@index([circleId])
+  @@map("CircleInvite")
+  @@schema("app")
+}
+
+model AiSuggestedAction {
+  id         String    @id @default(cuid())
+  circleId   String
+  userId     String
+  threadId   String?
+  payload    Json
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@map("AiSuggestedAction")
   @@schema("app")
 }

@@ -7,6 +7,8 @@ export interface Circle {
   /** The person/pet being cared for */
   heartName: string;
   heartAvatarUrl: string | null;
+  /** Accent color for tabs and UI (hex) */
+  color: string;
   members: CircleMember[];
   createdAt: string;
   updatedAt: string;

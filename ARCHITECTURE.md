@@ -95,7 +95,7 @@ shared/src/
 | `expo-auth-session` | OAuth PKCE flow for social login |
 | `expo-secure-store` | JWT token storage (hardware-backed on device) |
 | `expo-font` + `@expo-google-fonts/open-sans` | Embedded Open Sans |
-| `react-native-onesignal` | Push notifications |
+| `expo-notifications` | Push notifications (Expo push tokens; API sends via Expo Push API) |
 | `zustand` ^5 | Global state management |
 | `moti` + `react-native-reanimated` | Animations |
 | `phosphor-react-native` | Icons |
@@ -112,18 +112,22 @@ app/
 │   │   ├── _layout.tsx
 │   │   └── login.tsx          Email + Google + Apple login/register
 │   └── (tabs)/
-│       ├── _layout.tsx        Tab bar (House, CirclesThree, CheckSquare, User)
+│       ├── _layout.tsx        Tab bar: default (Today · Circles · Tasks) or circle focus (circle · Chat · Concerns · Tasks)
 │       ├── index.tsx          Today — Daily Brief
 │       ├── circles.tsx        Circles list
-│       ├── tasks.tsx          Tasks & Concerns
-│       └── profile.tsx        User profile + logout
+│       ├── chat.tsx           Chat / threads
+│       ├── concerns.tsx       Concerns
+│       ├── tasks.tsx          Tasks
+│       └── profile.tsx        Profile (not on tab bar; header entry)
+│   └── invite/[code].tsx      Deep link: accept circle invite
 └── src/
     ├── lib/
     │   ├── api.ts             Typed fetch wrapper, token management
     │   └── auth.ts            OAuth flow helpers (expo-auth-session)
     └── store/
         ├── auth.store.ts      Zustand: user session, login/logout actions
-        └── circles.store.ts   Zustand: circles, tasks, concerns
+        ├── circles.store.ts   Zustand: circles, tasks, concerns
+        └── navigation.store.ts Zustand: focused circle (tab bar mode)
 ```
 
 **Auth flow:**
@@ -220,11 +224,14 @@ api/
 ```
 web/
 ├── app/
-│   ├── layout.tsx    Root layout with Radix Theme provider
-│   ├── globals.css   CSS variables for background, font
-│   └── page.tsx      Marketing homepage
-└── railway.toml      Railway deployment config
+│   ├── layout.tsx         Root layout with Radix Theme provider
+│   ├── globals.css        CSS variables for background, font
+│   ├── page.tsx           Marketing homepage
+│   └── invite/[code]/     Public invite landing — open app / App Store / Play
+└── railway.toml           Railway deployment config
 ```
+
+**Invite links:** The API emails links like `{WEB_PUBLIC_URL}/invite/{secretCode}`. That page calls `GET /public/invites/:code` on the API and offers `fformcare://invite/:code` (see `NEXT_PUBLIC_APP_SCHEME` / app `scheme` in `app.config.ts`).
 
 ---
 
@@ -239,7 +246,9 @@ All secrets live in the `care` 1Password vault. Never commit secrets.
 | Railway project ID | `op://care/railway/project_id` |
 | Railway token | `op://care/railway/token_prod` |
 | Expo project ID | `op://care/expo/id` |
-| OneSignal app ID | `op://care/onesignal/app_id` |
+| Postmark server token | transactional email (invites); `POSTMARK_TOKEN` on API |
+| Web public URL | marketing site base for invite links; `WEB_PUBLIC_URL` on API (e.g. `https://care.example.com`) |
+| OpenAI API key | Tend AI + suggestions; `OPENAI_API_KEY` on API |
 | JWT secret | `op://care/api/jwt_secret` |
 | Database URL | `op://care/database/url` |
 | Google OAuth client ID | `op://care/google-oauth/client_id` |
@@ -323,6 +332,6 @@ The following are scaffolded but need real implementation:
 - `api/src/routes/circles.ts` — Prisma queries for all circle/plan/concern/task endpoints
 - `app/app.config.ts` — `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` need to be added to 1Password and wired into the build
 - `app/app/(tabs)/` screens — real data from Zustand stores (scaffolded, data binding pending)
-- Push notifications — OneSignal initialized in app root, server-side send logic in API
+- Push notifications — `expo-notifications` in app; `POST /auth/device-token`; API sends via [Expo Push API](https://docs.expo.dev/push-notifications/sending-notifications/). Payload `data` uses string keys for deep links (`type`, `circleId`, `threadId`, etc.).
 - AI features (intake, digest, suggestions) — v2
 - EAS submit config — Apple Team ID, ASC App ID, Android service account

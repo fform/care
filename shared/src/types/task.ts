@@ -1,5 +1,15 @@
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
 
+export interface TaskSlotCompletion {
+  id: string;
+  taskId: string;
+  /** Calendar date YYYY-MM-DD */
+  date: string;
+  slotIndex: number;
+  completedAt: string;
+  completedByUserId: string;
+}
+
 export interface Task {
   id: string;
   circleId: string;
@@ -15,4 +25,8 @@ export interface Task {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  /** When true, use `slotCompletions` per day (e.g. feed 2× daily). */
+  isRecurring?: boolean;
+  recurrenceSlotTimes?: string[] | null;
+  slotCompletions?: TaskSlotCompletion[];
 }
