@@ -1,17 +1,42 @@
 /**
- * Tasks — checklist & repeating care (API)
+ * Tasks — checklist & repeating care; due soon first, then the rest.
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { CheckCircle } from 'phosphor-react-native';
+import { CheckCircle, Clipboard } from 'phosphor-react-native';
+import { ScreenTopInset } from '@/components/ScreenTopInset';
+import { ScreenEmptyState } from '@/components/ScreenEmptyState';
 import { Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useCirclesStore } from '@/store/circles.store';
 import { useNavigationStore } from '@/store/navigation.store';
 import type { Task } from '@care/shared/types';
+
+const DUE_SOON_DAYS = 7;
+
+type Row = { task: Task; circleName: string; heartName: string | null };
+
+function isDueSoon(task: Task): boolean {
+  if (!task.dueAt) return false;
+  const due = new Date(task.dueAt);
+  const limit = new Date();
+  limit.setDate(limit.getDate() + DUE_SOON_DAYS);
+  limit.setHours(23, 59, 59, 999);
+  return due.getTime() <= limit.getTime();
+}
+
+function sortRows(a: Row, b: Row): number {
+  const ta = a.task;
+  const tb = b.task;
+  const aDue = ta.dueAt ? new Date(ta.dueAt).getTime() : null;
+  const bDue = tb.dueAt ? new Date(tb.dueAt).getTime() : null;
+  if (aDue != null && bDue != null && aDue !== bDue) return aDue - bDue;
+  if (aDue != null && bDue === null) return -1;
+  if (aDue === null && bDue != null) return 1;
+  return new Date(tb.createdAt).getTime() - new Date(ta.createdAt).getTime();
+}
 
 export default function TasksScreen() {
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
@@ -36,85 +61,129 @@ export default function TasksScreen() {
     }
   }, [focusedCircleId, fetchTasks]);
 
-  const rows = useMemo(() => {
+  const { dueSoon, rest } = useMemo(() => {
     const isOpen = (t: Task) => t.status !== 'completed' && t.status !== 'skipped';
+    const flat: Row[] = [];
+
+    const addCircle = (circleId: string) => {
+      const circle = circles.find((c) => c.id === circleId);
+      const name = circle?.name ?? '';
+      const heart = circle?.heartName ?? null;
+      for (const t of tasksByCircle[circleId] ?? []) {
+        if (!isOpen(t)) continue;
+        flat.push({ task: t, circleName: name, heartName: heart });
+      }
+    };
+
     if (focusedCircleId) {
-      return (tasksByCircle[focusedCircleId] ?? []).filter(isOpen).map((t) => ({
-        task: t,
-        label: circles.find((c) => c.id === t.circleId)?.name ?? '',
-      }));
+      addCircle(focusedCircleId);
+    } else {
+      for (const c of circles) {
+        addCircle(c.id);
+      }
     }
-    return circles.flatMap((circle) =>
-      (tasksByCircle[circle.id] ?? []).filter(isOpen).map((t) => ({
-        task: t,
-        label: circle.name,
-      }))
-    );
+
+    const ds = flat.filter((r) => isDueSoon(r.task)).sort(sortRows);
+    const r = flat.filter((r) => !isDueSoon(r.task)).sort(sortRows);
+    return { dueSoon: ds, rest: r };
   }, [circles, tasksByCircle, focusedCircleId]);
 
+  const subtitle = focusedCircleId
+    ? 'Concrete things to do — one-off or repeating (like feedings).'
+    : 'All open tasks across your circles — due soon first.';
+
+  const renderCard = (row: Row) => (
+    <View key={row.task.id} style={styles.card}>
+      <View style={styles.cardText}>
+        <Text style={styles.badge}>{row.circleName}</Text>
+        {row.heartName ? (
+          <Text style={styles.heartLabel}>Caring for {row.heartName}</Text>
+        ) : null}
+        <Text style={styles.title}>{row.task.title}</Text>
+        {row.task.description ? <Text style={styles.desc}>{row.task.description}</Text> : null}
+        {row.task.dueAt ? (
+          <Text style={styles.dueLine}>
+            Due {new Date(row.task.dueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+          </Text>
+        ) : null}
+        {row.task.isRecurring ? (
+          <Text style={styles.recurring}>
+            Repeats: {(row.task.recurrenceSlotTimes ?? []).join(', ') || 'scheduled'}
+          </Text>
+        ) : null}
+      </View>
+      {!row.task.isRecurring ? (
+        <Pressable
+          onPress={() => completeTask(row.task.id, row.task.circleId, { date: today })}
+          style={styles.checkHit}
+          accessibilityRole="button"
+          accessibilityLabel="Mark task complete"
+        >
+          <View style={styles.check}>
+            <CheckCircle size={24} color={colors.primary} weight="duotone" />
+          </View>
+        </Pressable>
+      ) : (
+        <Text style={styles.slotHint}>Use Today to complete each time slot.</Text>
+      )}
+    </View>
+  );
+
+  const empty = dueSoon.length === 0 && rest.length === 0;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ScreenTopInset testID="tasks-screen">
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader
-          title="Tasks"
-          subtitle="Concrete things to do — one-off or repeating (like feedings). Concerns live on the Concerns tab."
-        />
+        <ScreenHeader title="Tasks" subtitle={subtitle} />
 
-        {rows.length === 0 ? (
-          <Text style={styles.empty}>No open tasks.</Text>
+        {empty ? (
+          <ScreenEmptyState
+            icon={Clipboard}
+            title="No open tasks"
+            body="Tasks from your circles show here — one-off to-dos and repeating care like walks or meds."
+            testID="tasks-empty"
+          />
         ) : (
-          rows.map(({ task, label }) => (
-            <View key={task.id} style={styles.card}>
-              <View style={styles.cardText}>
-                <Text style={styles.badge}>{label}</Text>
-                <Text style={styles.title}>{task.title}</Text>
-                {task.description ? (
-                  <Text style={styles.desc}>{task.description}</Text>
-                ) : null}
-                {task.isRecurring ? (
-                  <Text style={styles.recurring}>
-                    Repeats: {(task.recurrenceSlotTimes ?? []).join(', ') || 'scheduled'}
-                  </Text>
-                ) : null}
+          <>
+            {dueSoon.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Due soon</Text>
+                {dueSoon.map(renderCard)}
               </View>
-              {!task.isRecurring ? (
-                <Pressable
-                  onPress={() => completeTask(task.id, task.circleId, { date: today })}
-                  style={styles.checkHit}
-                  accessibilityRole="button"
-                  accessibilityLabel="Mark task complete"
-                >
-                  <View style={styles.check}>
-                    <CheckCircle size={24} color={colors.primary} weight="duotone" />
-                  </View>
-                </Pressable>
-              ) : (
-                <Text style={styles.slotHint}>Use Today to complete each time slot.</Text>
-              )}
-            </View>
-          ))
+            ) : null}
+            {rest.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>{dueSoon.length > 0 ? 'Later' : 'Open tasks'}</Text>
+                {rest.map(renderCard)}
+              </View>
+            ) : null}
+          </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </ScreenTopInset>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: {
     paddingBottom: spacing[10],
+    gap: spacing[4],
+  },
+  section: {
     gap: spacing[3],
   },
-  empty: {
-    paddingHorizontal: spacing[5],
-    fontSize: 14,
-    fontFamily: 'OpenSans_400Regular',
+  sectionLabel: {
+    marginHorizontal: spacing[5],
+    fontSize: 13,
+    fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   card: {
     marginHorizontal: spacing[5],
@@ -124,8 +193,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing[4],
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardText: { flex: 1, minWidth: 0, gap: 4 },
   badge: {
@@ -134,6 +201,11 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  heartLabel: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
   },
   title: {
     fontSize: 16,
@@ -144,6 +216,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textSecondary,
+  },
+  dueLine: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_500Medium',
+    color: colors.primary,
   },
   recurring: {
     fontSize: 12,

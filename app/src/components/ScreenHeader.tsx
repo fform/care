@@ -3,18 +3,21 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '@care/shared/components';
 import { colors, spacing } from '@care/shared/theme';
 
-/** Page title row — use `flex:1` + `minWidth:0` on the title block. Pair with `SafeAreaView` from `react-native-safe-area-context` on the screen. */
+/** Page title row — use `flex:1` + `minWidth:0` on the title block. Pair with `ScreenTopInset` (native top safe area). */
 export function ScreenHeader({
   title,
   subtitle,
+  left,
   right,
 }: {
   title: string;
   subtitle?: string;
+  left?: ReactNode;
   right?: ReactNode;
 }) {
   return (
     <View style={styles.row}>
+      {left ? <View style={styles.left}>{left}</View> : null}
       <View style={styles.titleBlock}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
@@ -47,6 +50,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
+    lineHeight: 34,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
   },
@@ -55,6 +59,10 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     lineHeight: 18,
+  },
+  left: {
+    flexShrink: 0,
+    paddingTop: 4,
   },
   right: {
     flexShrink: 0,

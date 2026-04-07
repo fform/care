@@ -3,10 +3,11 @@
  */
 import { useEffect, useMemo } from 'react';
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View as MotiView } from 'moti/build/components/view';
 import { useRouter } from 'expo-router';
-import { Warning, User, CheckCircle } from 'phosphor-react-native';
+import { Warning, User, CheckCircle, Flag, Clipboard } from 'phosphor-react-native';
+import { ScreenTopInset } from '@/components/ScreenTopInset';
+import { ScreenEmptyState } from '@/components/ScreenEmptyState';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
 import { useCirclesStore } from '@/store/circles.store';
@@ -70,7 +71,7 @@ export default function TodayScreen() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <SafeAreaView testID="today-screen" style={styles.safe} edges={['top']}>
+    <ScreenTopInset testID="today-screen">
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -121,7 +122,12 @@ export default function TodayScreen() {
             Time-sensitive or risky — things that need attention soon (not your everyday checklist).
           </Text>
           {openConcerns.length === 0 ? (
-            <Text style={styles.empty}>No open concerns. Nice.</Text>
+            <ScreenEmptyState
+              icon={Flag}
+              title="Nothing urgent right now"
+              body="When something time-sensitive comes up, it’ll show here so the whole circle can see it."
+              testID="today-empty-concerns"
+            />
           ) : (
             openConcerns.map(({ concern, circleLabel }) => (
               <View key={concern.id} style={styles.concernCard}>
@@ -146,7 +152,12 @@ export default function TodayScreen() {
             Check off items and repeating care (like meds or walks). Tap to complete when it’s done.
           </Text>
           {openTasks.length === 0 ? (
-            <Text style={styles.empty}>No open tasks.</Text>
+            <ScreenEmptyState
+              icon={Clipboard}
+              title="No tasks on your list"
+              body="Add tasks from your circle or Today — checklists and repeating care land here."
+              testID="today-empty-tasks"
+            />
           ) : (
             openTasks.map(({ task, circleLabel }) => (
               <View key={task.id} style={circleLabel ? styles.taskWrap : undefined}>
@@ -163,7 +174,7 @@ export default function TodayScreen() {
           )}
         </MotiView>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenTopInset>
   );
 }
 
@@ -203,7 +214,6 @@ function formatDate(d: Date): string {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: {
     padding: spacing[5],
@@ -259,13 +269,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: spacing[1],
   },
-  empty: {
-    fontSize: 14,
-    fontFamily: 'OpenSans_400Regular',
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-
   concernCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -273,8 +276,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing[4],
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   concernBody: { flex: 1, minWidth: 0 },
   concernText: {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, TextInput } from 'react-native';
+import { UsersThree } from 'phosphor-react-native';
 import { Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import type { CreateFromTemplateInput } from '@/store/circles.store';
@@ -21,6 +22,11 @@ const COPY: Record<
 export function TemplateEmptyState({ onCreateFromTemplate, busy }: Props) {
   return (
     <View style={styles.wrap}>
+      <View style={styles.hero} accessibilityRole="image" accessibilityLabel="Care circle illustration">
+        <View style={styles.heroRing}>
+          <UsersThree size={44} color={colors.primary} weight="duotone" />
+        </View>
+      </View>
       <Text style={styles.lead}>
         A <Text style={styles.bold}>circle</Text> is your shared space for everyone helping with care.
         Pick a starter — we’ll add a few tasks and concerns you can edit.
@@ -100,6 +106,15 @@ function TemplateForm({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing[4], paddingBottom: spacing[6] },
+  hero: { alignItems: 'center', marginBottom: spacing[2] },
+  heroRing: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: colors.accentBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   lead: {
     fontSize: 15,
     fontFamily: 'OpenSans_400Regular',

@@ -1,0 +1,66 @@
+# Test: tab bar hides on immersive chat, returns after pressing Back to Today.
+# Prereqs: logged in, at least one circle exists.
+appId: com.fform.care
+---
+- launchApp
+- tapOn:
+    text: "Later"
+    optional: true
+
+# Wait for Today screen
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 15000
+
+# Tab bar visible
+- assertVisible: "CONCERNS"
+
+# Go to Circles tab, tap the first circle card to focus it
+- tapOn: "CIRCLES"
+- extendedWaitUntil:
+    visible:
+      id: "circles-screen"
+    timeout: 5000
+
+# Tap the circle card (the whole card is pressable, tap its name)
+- tapOn:
+    text: ".*"
+    index: 0
+    optional: false
+
+# After focusing a circle we land on Today
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 5000
+
+# Now tap Chat tab
+- tapOn: "CHAT"
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 8000
+
+# Wait for immersive thread to load (back button appears)
+- extendedWaitUntil:
+    visible: "Back to Today"
+    timeout: 10000
+
+- takeScreenshot: immersive_chat_tab_hidden
+
+# Tab bar should be hidden
+- assertNotVisible: "CONCERNS"
+
+# Press Back to Today
+- tapOn: "Back to Today"
+
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 8000
+
+- takeScreenshot: after_back_to_today
+
+# Tab bar should be visible again
+- assertVisible: "CONCERNS"

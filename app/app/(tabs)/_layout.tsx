@@ -25,7 +25,7 @@ import {
   BringToFront,
 } from 'lucide-react-native';
 import { colors, radius } from '@care/shared/theme';
-import { useNavigationStore } from '@/store/navigation.store';
+import { TAB_BAR_HIDE_ANIMATION_MS, registerTabNavigator, useNavigationStore } from '@/store/navigation.store';
 import { useCirclesStore } from '@/store/circles.store';
 
 const TAB_ICON_SIZE = 22;
@@ -137,10 +137,18 @@ type TabBarProps = {
   };
 };
 
+const TAB_BAR_HEIGHT_FALLBACK = 108;
+
 function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
   const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
+  const tabBarHidden = useNavigationStore((s) => s.tabBarHidden);
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+
+  useEffect(() => {
+    registerTabNavigator((name) => navigation.navigate(name));
+  }, [navigation]);
 
   const visibleRoutes = state.routes.filter(
     (r) => !(focusedCircleId && r.name === 'circles')
@@ -153,18 +161,22 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const prevVisibleLen = useRef<number | null>(null);
   useLayoutEffect(() => {
     if (prevVisibleLen.current !== null && prevVisibleLen.current !== visibleRoutes.length) {
-      configureTabBarLayoutAnimation();
+      if (!tabBarHidden) {
+        configureTabBarLayoutAnimation();
+      }
     }
     prevVisibleLen.current = visibleRoutes.length;
-  }, [visibleRoutes.length]);
+  }, [visibleRoutes.length, tabBarHidden]);
 
   const prevCircle = useRef<string | null | undefined>(undefined);
   useLayoutEffect(() => {
     if (prevCircle.current !== undefined && prevCircle.current !== focusedCircleId) {
-      configureTabBarLayoutAnimation();
+      if (!tabBarHidden) {
+        configureTabBarLayoutAnimation();
+      }
     }
     prevCircle.current = focusedCircleId;
-  }, [focusedCircleId]);
+  }, [focusedCircleId, tabBarHidden]);
 
   useEffect(() => {
     if (focusedCircleId && focusedName === 'circles') {
@@ -203,8 +215,38 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
     setTabLayouts((prev) => ({ ...prev, [routeKey]: { x, y, width, height } }));
   };
 
+  // Only Chat can hide the tab bar. If a different tab is active, always show it —
+  // no effects or timing needed, just a synchronous check on the tab navigator state.
+  const effectiveHidden = tabBarHidden && focusedName === 'chat';
+
+  // Guard against stale measurements taken while MotiView was collapsed (e.g. after hot
+  // reload). The pill alone is ~62px, so any value below that is clearly wrong.
+  const MIN_VALID_HEIGHT = 60;
+  const openHeight = tabBarHeight > MIN_VALID_HEIGHT ? tabBarHeight : TAB_BAR_HEIGHT_FALLBACK;
+
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+    <MotiView
+      style={{ width: '100%', overflow: 'hidden' }}
+      animate={{
+        height: effectiveHidden ? 0 : openHeight,
+        opacity: effectiveHidden ? 0 : 1,
+      }}
+      transition={{
+        type: 'timing',
+        duration: TAB_BAR_HIDE_ANIMATION_MS,
+        easing: Easing.out(Easing.cubic),
+      }}
+      pointerEvents={effectiveHidden ? 'none' : 'auto'}
+    >
+      <View
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > MIN_VALID_HEIGHT && !effectiveHidden && Math.abs(h - tabBarHeight) > 0.5) {
+            setTabBarHeight(h);
+          }
+        }}
+        style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}
+      >
       <View style={styles.pillOuter}>
         <View style={styles.pillShell}>
           <View style={styles.pillInner} pointerEvents="box-none">
@@ -308,6 +350,7 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
         </View>
       </View>
     </View>
+    </MotiView>
   );
 }
 

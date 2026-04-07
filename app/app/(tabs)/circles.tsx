@@ -13,8 +13,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View as MotiView } from 'moti/build/components/view';
+import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Plus } from 'phosphor-react-native';
 import { Text } from '@care/shared/components';
@@ -104,7 +104,7 @@ export default function CirclesScreen() {
   const showEmpty = !isLoading && circles.length === 0;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ScreenTopInset testID="circles-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -205,7 +205,7 @@ export default function CirclesScreen() {
           </Pressable>
         </Modal>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenTopInset>
   );
 }
 
@@ -262,7 +262,6 @@ function CircleCard({ circle, onOpen }: { circle: Circle; onOpen: () => void }) 
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: { flex: 1 },
   content: {
@@ -284,8 +283,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing[5],
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing[4],
     gap: spacing[2],
   },
@@ -309,7 +306,7 @@ const styles = StyleSheet.create({
   },
   badgeWarning: { backgroundColor: colors.warning },
   badgeMuted: { backgroundColor: colors.border },
-  badgeTasks: { backgroundColor: colors.accentBg, borderWidth: 1, borderColor: colors.border },
+  badgeTasks: { backgroundColor: colors.accentBg },
   badgeText: {
     fontSize: 11,
     fontFamily: 'OpenSans_600SemiBold',
