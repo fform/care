@@ -1,7 +1,7 @@
 import * as Updates from 'expo-updates';
 
 /** Deep link scheme (must match native URL scheme + API `OAUTH_APP_REDIRECT_SCHEME`). */
-export const APP_URL_SCHEME = process.env.EXPO_PUBLIC_APP_URL_SCHEME ?? 'fformcare';
+export const APP_URL_SCHEME = 'fformcare';
 
 export type AppEnv = 'dev' | 'preview' | 'production';
 
@@ -25,6 +25,10 @@ const base: AppConfig = {
   mixpanelToken: '',
   env,
 };
+
+if (env ==='dev') {
+  base.apiUrl = 'https://mac-studio.tail28832a.ts.net';
+}
 
 /**
  * Runtime config. `env` follows `expo-updates` channel (OTA).

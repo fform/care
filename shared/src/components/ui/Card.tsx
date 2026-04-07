@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewProps, StyleSheet } from 'react-native';
-import { MotiView } from 'moti';
+import { View as MotiView } from 'moti/build/components/view';
 import { colors, radius, shadow, spacing } from '../../theme';
 
 interface CardProps extends ViewProps {

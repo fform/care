@@ -1,9 +1,9 @@
 /**
- * Profile & Settings screen
+ * Profile & Settings screen (stack — not a tab)
  */
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MotiView } from 'moti';
+import { View as MotiView } from 'moti/build/components/view';
 import { Bell, EnvelopeSimple, ShieldCheck, CreditCard, Question, SignOut, CaretRight } from 'phosphor-react-native';
 import { router } from 'expo-router';
 import { Text } from '@care/shared/components';

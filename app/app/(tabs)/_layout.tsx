@@ -1,13 +1,113 @@
-import type { ReactNode } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+/**
+ * Tab layout — Moti sliding **circle** highlight. Selected tab: label hidden, larger icon centered in circle.
+ */
+import type { ComponentType, ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { LayoutChangeEvent } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from 'react-native';
+import { Easing } from 'react-native-reanimated';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, CirclesThree, ChatCircle, Warning, CheckSquare } from 'phosphor-react-native';
-import { colors, radius, spacing } from '@care/shared/theme';
+import { View as MotiView } from 'moti/build/components/view';
+import {
+  Sun,
+  Circle,
+  MessageCircle,
+  Flag,
+  BringToFront,
+} from 'lucide-react-native';
+import { colors, radius } from '@care/shared/theme';
 import { useNavigationStore } from '@/store/navigation.store';
 import { useCirclesStore } from '@/store/circles.store';
 
-const TAB_ICON_SIZE = 18;
+const TAB_ICON_SIZE = 22;
+const TAB_ICON_SELECTED = 27;
+const ICON_STACK = Math.max(TAB_ICON_SIZE, TAB_ICON_SELECTED) + 4;
+const TAB_STROKE = { active: 2.35, idle: 1.9 };
+
+/** Fixed-size highlight — position is computed from each tab’s layout center (see `tabBarTrack`). */
+const HIGHLIGHT_DIAMETER = 44;
+
+const TAB_ROW_INNER_H = 54;
+
+/** Subtle spring — highlight slide only (icon/label use timing so they don’t overshoot). */
+const HIGHLIGHT_SPRING = {
+  type: 'spring' as const,
+  damping: 34,
+  stiffness: 440,
+  mass: 0.82,
+};
+
+const CONTENT_TRANSITION = {
+  type: 'timing' as const,
+  duration: 185,
+  easing: Easing.out(Easing.cubic),
+};
+
+type LucideTabIcon = ComponentType<{
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}>;
+
+/** Selected: large inverse icon only. Unselected: muted small icon (+ label rendered by parent). */
+function TabBarLucideIcon({
+  Icon,
+  focused,
+}: {
+  Icon: LucideTabIcon;
+  focused: boolean;
+}) {
+  return (
+    <View style={styles.iconStack} pointerEvents="none">
+      <MotiView
+        style={styles.iconLayer}
+        pointerEvents="none"
+        animate={{ opacity: focused ? 1 : 0 }}
+        transition={CONTENT_TRANSITION}
+      >
+        <Icon
+          size={TAB_ICON_SELECTED}
+          color={colors.textInverse}
+          strokeWidth={TAB_STROKE.active}
+        />
+      </MotiView>
+      <MotiView
+        style={styles.iconLayer}
+        pointerEvents="none"
+        animate={{ opacity: focused ? 0 : 1 }}
+        transition={CONTENT_TRANSITION}
+      >
+        <Icon
+          size={TAB_ICON_SIZE}
+          color={colors.textMuted}
+          strokeWidth={TAB_STROKE.idle}
+        />
+      </MotiView>
+    </View>
+  );
+}
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function configureTabBarLayoutAnimation() {
+  LayoutAnimation.configureNext({
+    duration: 320,
+    update: { type: LayoutAnimation.Types.easeInEaseOut },
+    create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  });
+}
 
 type TabBarProps = {
   state: {
@@ -19,7 +119,11 @@ type TabBarProps = {
     {
       options: {
         title?: string;
-        tabBarIcon?: (p: { focused: boolean; color: string; size: number }) => ReactNode;
+        tabBarIcon?: (p: {
+          focused: boolean;
+          color: string;
+          size: number;
+        }) => ReactNode;
       };
     }
   >;
@@ -36,60 +140,172 @@ type TabBarProps = {
 function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
-  const circles = useCirclesStore((s) => s.circles);
-  const focusedCircle = circles.find((c) => c.id === focusedCircleId);
+  const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
+
+  const visibleRoutes = state.routes.filter(
+    (r) => !(focusedCircleId && r.name === 'circles')
+  );
+
+  const focusedRoute = state.routes[state.index];
+  const focusedName = focusedRoute?.name;
+
+  const visibleKey = `${focusedCircleId ?? 'none'}|${visibleRoutes.map((r) => r.name).join('|')}`;
+  const prevVisibleLen = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (prevVisibleLen.current !== null && prevVisibleLen.current !== visibleRoutes.length) {
+      configureTabBarLayoutAnimation();
+    }
+    prevVisibleLen.current = visibleRoutes.length;
+  }, [visibleRoutes.length]);
+
+  const prevCircle = useRef<string | null | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (prevCircle.current !== undefined && prevCircle.current !== focusedCircleId) {
+      configureTabBarLayoutAnimation();
+    }
+    prevCircle.current = focusedCircleId;
+  }, [focusedCircleId]);
+
+  useEffect(() => {
+    if (focusedCircleId && focusedName === 'circles') {
+      navigation.navigate('index');
+    }
+  }, [focusedCircleId, focusedName, navigation]);
+
+  const [tabLayouts, setTabLayouts] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
+  const [pill, setPill] = useState({ left: 0, top: 0, opacity: 0 });
+
+  useLayoutEffect(() => {
+    setTabLayouts({});
+    setPill({ left: 0, top: 0, opacity: 0 });
+  }, [visibleKey]);
+
+  const focusedKey = focusedRoute?.key;
+  useEffect(() => {
+    if (!focusedKey) return;
+    const L = tabLayouts[focusedKey];
+    if (!L || L.width <= 0 || L.height <= 0) return;
+
+    const D = HIGHLIGHT_DIAMETER;
+    const cx = L.x + L.width / 2;
+    const cy = L.y + L.height / 2;
+    setPill({
+      left: cx - D / 2,
+      top: cy - D / 2,
+      opacity: 1,
+    });
+  }, [focusedKey, tabLayouts]);
+
+  const onTabLayout = (routeKey: string) => (e: LayoutChangeEvent) => {
+    const { x, y, width, height } = e.nativeEvent.layout;
+    setTabLayouts((prev) => ({ ...prev, [routeKey]: { x, y, width, height } }));
+  };
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-      <View style={styles.pill}>
-        {state.routes.map((route: (typeof state.routes)[number], index: number) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
+      <View style={styles.pillOuter}>
+        <View style={styles.pillShell}>
+          <View style={styles.pillInner} pointerEvents="box-none">
+            <View style={styles.tabBarTrack} pointerEvents="box-none">
+              <MotiView
+                pointerEvents="none"
+                style={styles.selectionPillBase}
+                from={{
+                  left: 0,
+                  top: 0,
+                  width: HIGHLIGHT_DIAMETER,
+                  height: HIGHLIGHT_DIAMETER,
+                  opacity: 0,
+                }}
+                animate={{
+                  left: pill.left,
+                  top: pill.top,
+                  width: HIGHLIGHT_DIAMETER,
+                  height: HIGHLIGHT_DIAMETER,
+                  opacity: pill.opacity,
+                }}
+                transition={HIGHLIGHT_SPRING}
+              />
+              <View style={styles.tabsRow} pointerEvents="box-none">
+              {visibleRoutes.map((route) => {
+                const { options } = descriptors[route.key];
+                const isFocused = focusedName === route.name;
+                const label = (options.title ?? route.name).toUpperCase();
 
-          const isCircleModeFirst = Boolean(focusedCircleId) && route.name === 'index';
-          const activeBackground =
-            isFocused && isCircleModeFirst && focusedCircle
-              ? focusedCircle.color
-              : isFocused
-                ? colors.primary
-                : 'transparent';
+                const onPress = () => {
+                  const event = navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
+                  if (event.defaultPrevented) return;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
+                  if (route.name === 'index' && focusedCircleId && isFocused) {
+                    configureTabBarLayoutAnimation();
+                    setFocusedCircleId(null);
+                    return;
+                  }
 
-          return (
-            <Pressable
-              key={route.key}
-              style={[
-                styles.tab,
-                isFocused && { backgroundColor: activeBackground },
-              ]}
-              onPress={onPress}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-            >
-              {options.tabBarIcon?.({
-                focused: isFocused,
-                color: isFocused ? colors.textInverse : colors.textMuted,
-                size: TAB_ICON_SIZE,
+                  if (!isFocused) {
+                    navigation.navigate(route.name, route.params);
+                  }
+                };
+
+                const iconSelected = options.tabBarIcon?.({
+                  focused: true,
+                  color: colors.textInverse,
+                  size: TAB_ICON_SELECTED,
+                });
+                const iconIdle = options.tabBarIcon?.({
+                  focused: false,
+                  color: colors.textMuted,
+                  size: TAB_ICON_SIZE,
+                });
+
+                return (
+                  <Pressable
+                    key={route.key}
+                    style={styles.tab}
+                    onLayout={onTabLayout(route.key)}
+                    onPress={onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    accessibilityState={isFocused ? { selected: true } : {}}
+                  >
+                    <MotiView
+                      style={StyleSheet.absoluteFillObject}
+                      animate={{ opacity: isFocused ? 1 : 0 }}
+                      transition={CONTENT_TRANSITION}
+                      pointerEvents={isFocused ? 'auto' : 'none'}
+                    >
+                      <View style={styles.tabLayerFill}>
+                        {iconSelected}
+                      </View>
+                    </MotiView>
+                    <MotiView
+                      style={StyleSheet.absoluteFillObject}
+                      animate={{ opacity: isFocused ? 0 : 1 }}
+                      transition={CONTENT_TRANSITION}
+                      pointerEvents={isFocused ? 'none' : 'auto'}
+                    >
+                      <View style={styles.tabLayerFill}>
+                        <View style={styles.tabIdleColumn}>
+                          {iconIdle}
+                          <Text style={styles.labelMuted} numberOfLines={1}>
+                            {label}
+                          </Text>
+                        </View>
+                      </View>
+                    </MotiView>
+                  </Pressable>
+                );
               })}
-              <Text
-                style={[styles.label, isFocused && styles.labelActive]}
-                numberOfLines={1}
-              >
-                {(options.title ?? route.name).toUpperCase()}
-              </Text>
-            </Pressable>
-          );
-        })}
+              </View>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -112,21 +328,14 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: indexTitle,
-          tabBarIcon: ({ color, size }) =>
-            circleMode && focusedCircle ? (
-              <CirclesThree size={size} color={color} weight="fill" />
-            ) : (
-              <Sun size={size} color={color} weight="fill" />
-            ),
+          tabBarIcon: ({ focused }) => <TabBarLucideIcon Icon={Sun} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="circles"
         options={{
           title: 'Circles',
-          tabBarIcon: ({ color, size }) => (
-            <CirclesThree size={size} color={color} weight="fill" />
-          ),
+          tabBarIcon: ({ focused }) => <TabBarLucideIcon Icon={Circle} focused={focused} />,
           href: circleMode ? null : '/circles',
         }}
       />
@@ -134,37 +343,21 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <ChatCircle size={size} color={color} weight="fill" />
-          ),
-          href: circleMode ? '/chat' : null,
+          tabBarIcon: ({ focused }) => <TabBarLucideIcon Icon={MessageCircle} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="concerns"
         options={{
           title: 'Concerns',
-          tabBarIcon: ({ color, size }) => (
-            <Warning size={size} color={color} weight="fill" />
-          ),
-          href: circleMode ? '/concerns' : null,
+          tabBarIcon: ({ focused }) => <TabBarLucideIcon Icon={Flag} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
           title: 'Tasks',
-          tabBarIcon: ({ color, size }) => (
-            <CheckSquare size={size} color={color} weight="fill" />
-          ),
-          href: '/tasks',
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          href: null,
+          tabBarIcon: ({ focused }) => <TabBarLucideIcon Icon={BringToFront} focused={focused} />,
         }}
       />
     </Tabs>
@@ -177,33 +370,78 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21,
     paddingTop: 12,
   },
-  pill: {
-    flexDirection: 'row',
-    minHeight: 62,
-    backgroundColor: colors.surface,
+  pillOuter: {
+    overflow: 'hidden',
+    borderRadius: radius.full,
+  },
+  pillShell: {
     borderRadius: 36,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 4,
-    alignItems: 'center',
+    backgroundColor: colors.surface,
+  },
+  pillInner: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    minHeight: 62,
+    position: 'relative',
+  },
+  /** Shared origin (0,0) for highlight `left/top` and tab `onLayout` x/y — do not position highlight outside this. */
+  tabBarTrack: {
+    position: 'relative',
+    width: '100%',
+    height: TAB_ROW_INNER_H,
+  },
+  selectionPillBase: {
+    position: 'absolute',
+    backgroundColor: colors.primary,
+    borderRadius: 9999,
+    zIndex: 0,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
   },
   tab: {
     flex: 1,
-    minHeight: 54,
-    borderRadius: 26,
+    minWidth: 0,
+    height: TAB_ROW_INNER_H,
+    position: 'relative',
+    backgroundColor: 'transparent',
+    zIndex: 2,
+    elevation: 4,
+  },
+  tabLayerFill: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingHorizontal: 4,
   },
-  label: {
-    fontSize: 8,
+  tabIdleColumn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  iconStack: {
+    width: ICON_STACK,
+    height: ICON_STACK,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelMuted: {
+    fontSize: 9,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
     letterSpacing: 0.3,
     textAlign: 'center',
-  },
-  labelActive: {
-    color: colors.textInverse,
   },
 });

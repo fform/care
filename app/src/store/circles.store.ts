@@ -32,6 +32,7 @@ interface CirclesState {
     circleId: string,
     opts?: { date: string; slotIndex?: number; notes?: string }
   ) => Promise<void>;
+  resolveConcern: (concernId: string, circleId: string) => Promise<void>;
 }
 
 export const useCirclesStore = create<CirclesState>((set, get) => ({
@@ -107,5 +108,12 @@ export const useCirclesStore = create<CirclesState>((set, get) => ({
       notes: opts?.notes,
     });
     await get().fetchTasks(circleId);
+  },
+
+  resolveConcern: async (concernId, circleId) => {
+    await api.patch(`/concerns/${concernId}`, {
+      resolvedAt: new Date().toISOString(),
+    });
+    await get().fetchConcerns(circleId);
   },
 }));

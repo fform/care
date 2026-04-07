@@ -10,7 +10,8 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "@care/shared/*": ["./src/*"]
+      "@care/shared/*": ["./src/*"],
+      "moti/build/components/view": ["../app/node_modules/moti/build/components/view"]
     }
   },
   "include": ["src"],

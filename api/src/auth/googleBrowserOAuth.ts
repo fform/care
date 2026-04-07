@@ -16,13 +16,21 @@ const GOOGLE_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
 const MOBILE_OAUTH_PATH = 'oauth/google';
 
 /**
- * Public origin for OAuth redirect_uri. On Railway, `RAILWAY_PUBLIC_DOMAIN` is injected
- * (hostname only, e.g. `care-api.up.railway.app`). For local dev, set it to `localhost:3001`.
+ * Public base URL for OAuth `redirect_uri` (`{base}/auth/google/callback`).
+ * - Railway: `RAILWAY_PUBLIC_DOMAIN` (hostname or full URL)
+ * - Local / Tailscale funnel: set `API_PUBLIC_URL` (full URL, e.g. `https://mac-studio….ts.net`)
  */
 function getApiPublicUrl(): string {
+  const explicit = process.env.API_PUBLIC_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
+  }
+
   const raw = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
   if (!raw) {
-    throw new Error('RAILWAY_PUBLIC_DOMAIN is not configured');
+    throw new Error(
+      'Set API_PUBLIC_URL (full URL, e.g. https://your-host.ts.net) or RAILWAY_PUBLIC_DOMAIN for Google OAuth redirect_uri'
+    );
   }
   if (/^https?:\/\//i.test(raw)) {
     return raw.replace(/\/$/, '');
@@ -114,13 +122,29 @@ export async function handleGoogleOAuthStart(
   next: NextFunction
 ): Promise<void> {
   try {
-    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
     if (!clientId) {
-      res.status(503).json({ error: 'Google OAuth is not configured', status: 503 });
+      res.status(503).json({
+        error:
+          'Google OAuth is not configured: set GOOGLE_OAUTH_CLIENT_ID (and GOOGLE_OAUTH_CLIENT_SECRET) on the API. For local dev, load them via root .env and `pnpm dev:api`.',
+        status: 503,
+      });
       return;
     }
 
-    const redirectUri = getGoogleOAuthRedirectUri();
+    let redirectUri: string;
+    try {
+      redirectUri = getGoogleOAuthRedirectUri();
+    } catch (e) {
+      res.status(503).json({
+        error:
+          e instanceof Error
+            ? `${e.message} (needed to build https://…/auth/google/callback for Google Cloud)`
+            : 'API public URL is not configured for OAuth',
+        status: 503,
+      });
+      return;
+    }
     const codeVerifier = newPkceVerifier();
     const state = await signOAuthState(codeVerifier);
 

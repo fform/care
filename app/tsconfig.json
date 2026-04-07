@@ -11,6 +11,9 @@
       ],
       "@/*": [
         "./src/*"
+      ],
+      "moti/build/components/view": [
+        "./node_modules/moti/build/components/view"
       ]
     }
   },

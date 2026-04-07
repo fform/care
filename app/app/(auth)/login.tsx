@@ -4,7 +4,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { MotiView } from 'moti';
+import { View as MotiView } from 'moti/build/components/view';
 import { GoogleLogo, AppleLogo, Envelope, Lock, ArrowRight } from 'phosphor-react-native';
 import { Button, Input, Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
@@ -122,6 +122,7 @@ export default function LoginScreen() {
 
   return (
     <ScrollView
+      testID="login-screen"
       style={styles.scroll}
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
@@ -207,6 +208,7 @@ export default function LoginScreen() {
           />
         )}
         <Input
+          testID="login-email-input"
           label="Email"
           value={email}
           onChangeText={setEmail}
@@ -217,6 +219,7 @@ export default function LoginScreen() {
           leftIcon={<Envelope size={18} color={colors.textDisabled} />}
         />
         <Input
+          testID="login-password-input"
           label="Password"
           value={password}
           onChangeText={setPassword}
@@ -233,6 +236,7 @@ export default function LoginScreen() {
         )}
 
         <Button
+          testID="login-submit"
           label={mode === 'login' ? 'Sign in' : 'Create account'}
           onPress={handleEmailSubmit}
           loading={isLoading}
@@ -240,7 +244,10 @@ export default function LoginScreen() {
           iconPosition="right"
         />
 
-        <Pressable onPress={() => setMode(mode === 'login' ? 'register' : 'login')}>
+        <Pressable
+          testID="login-mode-toggle"
+          onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+        >
           <View style={styles.toggleRow}>
             <Text variant="bodySmall" color={colors.textSecondary}>
               {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}

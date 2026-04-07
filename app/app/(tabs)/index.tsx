@@ -1,62 +1,81 @@
 /**
- * Today screen — Daily Brief
- * "What do I need to care about right now?"
+ * Today screen — Daily Brief (API)
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MotiView } from 'moti';
+import { View as MotiView } from 'moti/build/components/view';
 import { useRouter } from 'expo-router';
-import { Warning, User } from 'phosphor-react-native';
+import { Warning, User, CheckCircle } from 'phosphor-react-native';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
 import { useCirclesStore } from '@/store/circles.store';
 import { useNavigationStore } from '@/store/navigation.store';
 import { Text } from '@care/shared/components';
-
-const MOCK_CONCERNS = [
-  { id: '1', text: "Mom's prescription runs out in 3 days" },
-  { id: '2', text: 'Buster needs flea medication this week' },
-];
-
-const MOCK_TASKS = [
-  { id: '1', title: 'Drive Mom to Dr. Chen at 2pm', meta: 'Today · Assigned to you' },
-  { id: '2', title: 'Pick up groceries for Dad', meta: 'Today · Assigned to you' },
-  { id: '3', title: 'Feed Buster evening meds', meta: 'Today · Assigned to you' },
-];
-
-const MOCK_UPDATES = [
-  { id: '1', color: '#D4916E', text: "Jake picked up Mom's dry cleaning" },
-  { id: '2', color: '#B8724F', text: 'Alex walked Buster this morning' },
-];
+import type { Concern, Task } from '@care/shared/types';
 
 export default function TodayScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
   const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
-  const { fetchCircles, fetchTasks } = useCirclesStore();
+
+  const circles = useCirclesStore((s) => s.circles);
+  const tasksByCircle = useCirclesStore((s) => s.tasks);
+  const concernsByCircle = useCirclesStore((s) => s.concerns);
+  const fetchCircles = useCirclesStore((s) => s.fetchCircles);
+  const fetchTasks = useCirclesStore((s) => s.fetchTasks);
+  const completeTask = useCirclesStore((s) => s.completeTask);
 
   useEffect(() => {
-    fetchCircles();
-  }, []);
+    fetchCircles().then(() => {
+      useCirclesStore.getState().refreshAllSummaries();
+    });
+  }, [fetchCircles]);
 
   useEffect(() => {
     if (focusedCircleId) {
       fetchTasks(focusedCircleId);
     }
-  }, [focusedCircleId]);
+  }, [focusedCircleId, fetchTasks]);
 
-  const firstName = user?.name?.split(' ')[0] ?? 'Sarah';
+  const openConcerns = useMemo(() => {
+    const open = (c: Concern) => !c.resolvedAt;
+    if (focusedCircleId) {
+      return (concernsByCircle[focusedCircleId] ?? [])
+        .filter(open)
+        .map((c) => ({ concern: c, circleLabel: undefined as string | undefined }));
+    }
+    return circles.flatMap((c) =>
+      (concernsByCircle[c.id] ?? [])
+        .filter(open)
+        .map((x) => ({ concern: x, circleLabel: c.name }))
+    );
+  }, [circles, concernsByCircle, focusedCircleId]);
+
+  const openTasks = useMemo(() => {
+    const isOpen = (t: Task) => t.status !== 'completed' && t.status !== 'skipped';
+    if (focusedCircleId) {
+      return (tasksByCircle[focusedCircleId] ?? [])
+        .filter(isOpen)
+        .map((t) => ({ task: t, circleLabel: undefined as string | undefined }));
+    }
+    return circles.flatMap((c) =>
+      (tasksByCircle[c.id] ?? []).filter(isOpen).map((t) => ({ task: t, circleLabel: c.name }))
+    );
+  }, [circles, tasksByCircle, focusedCircleId]);
+
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
+
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView testID="today-screen" style={styles.safe} edges={['top']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Greeting */}
         <MotiView
           from={{ opacity: 0, translateY: -6 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -65,7 +84,9 @@ export default function TodayScreen() {
         >
           <View style={styles.headerRow}>
             <View style={styles.headerText}>
-              <Text style={styles.greeting}>{getGreeting()}, {firstName}</Text>
+              <Text style={styles.greeting} numberOfLines={2}>
+                {getGreeting()}, {firstName}
+              </Text>
               <Text style={styles.date}>{formatDate(new Date())}</Text>
             </View>
             <View style={styles.headerActions}>
@@ -89,7 +110,6 @@ export default function TodayScreen() {
           </View>
         </MotiView>
 
-        {/* Concerns */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -97,50 +117,77 @@ export default function TodayScreen() {
           style={styles.section}
         >
           <Text style={styles.sectionLabel}>Concerns</Text>
-          {MOCK_CONCERNS.map((c) => (
-            <View key={c.id} style={styles.concernCard}>
-              <Warning size={18} color={colors.warning} weight="fill" />
-              <Text style={styles.concernText}>{c.text}</Text>
-            </View>
-          ))}
+          <Text style={styles.sectionHint}>
+            Time-sensitive or risky — things that need attention soon (not your everyday checklist).
+          </Text>
+          {openConcerns.length === 0 ? (
+            <Text style={styles.empty}>No open concerns. Nice.</Text>
+          ) : (
+            openConcerns.map(({ concern, circleLabel }) => (
+              <View key={concern.id} style={styles.concernCard}>
+                <Warning size={18} color={colors.warning} weight="fill" />
+                <View style={styles.concernBody}>
+                  <Text style={styles.concernText}>{concern.title}</Text>
+                  {circleLabel ? <Text style={styles.concernMeta}>{circleLabel}</Text> : null}
+                </View>
+              </View>
+            ))
+          )}
         </MotiView>
 
-        {/* Tasks Today */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'spring', damping: 20, delay: 120 }}
           style={styles.section}
         >
-          <Text style={styles.sectionLabel}>Your Tasks Today</Text>
-          {MOCK_TASKS.map((task) => (
-            <View key={task.id} style={styles.taskRow}>
-              <View style={styles.checkbox} />
-              <View style={styles.taskContent}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <Text style={styles.taskMeta}>{task.meta}</Text>
+          <Text style={styles.sectionLabel}>Tasks</Text>
+          <Text style={styles.sectionHint}>
+            Check off items and repeating care (like meds or walks). Tap to complete when it’s done.
+          </Text>
+          {openTasks.length === 0 ? (
+            <Text style={styles.empty}>No open tasks.</Text>
+          ) : (
+            openTasks.map(({ task, circleLabel }) => (
+              <View key={task.id} style={circleLabel ? styles.taskWrap : undefined}>
+                {circleLabel ? <Text style={styles.taskCircle}>{circleLabel}</Text> : null}
+                <TaskRow
+                  task={task}
+                  onComplete={() => {
+                    if (task.isRecurring) return;
+                    completeTask(task.id, task.circleId, { date: today });
+                  }}
+                />
               </View>
-            </View>
-          ))}
-        </MotiView>
-
-        {/* Circle Updates */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 20, delay: 180 }}
-          style={styles.section}
-        >
-          <Text style={styles.sectionLabel}>Circle Updates</Text>
-          {MOCK_UPDATES.map((update) => (
-            <View key={update.id} style={styles.updateRow}>
-              <View style={[styles.updateAvatar, { backgroundColor: update.color }]} />
-              <Text style={styles.updateText}>{update.text}</Text>
-            </View>
-          ))}
+            ))
+          )}
         </MotiView>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function TaskRow({ task, onComplete }: { task: Task; onComplete: () => void }) {
+  const done = task.status === 'completed';
+  const canTap = !task.isRecurring && !done;
+  return (
+    <Pressable
+      style={styles.taskRow}
+      onPress={canTap ? onComplete : undefined}
+      disabled={!canTap}
+    >
+      <View style={[styles.checkbox, done && styles.checkboxDone]}>
+        {done ? <CheckCircle size={22} color={colors.success} weight="fill" /> : null}
+      </View>
+      <View style={styles.taskContent}>
+        <Text style={styles.taskTitle}>{task.title}</Text>
+        <Text style={styles.taskMeta}>
+          {task.isRecurring
+            ? `Repeats · ${(task.recurrenceSlotTimes ?? []).join(', ') || 'scheduled'}`
+            : 'Tap to complete'}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -172,8 +219,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing[3],
   },
-  headerText: { flex: 1, gap: spacing[1] },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  headerText: { flex: 1, minWidth: 0, gap: spacing[1] },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], flexShrink: 0 },
   exitFocus: {
     paddingVertical: 6,
     paddingHorizontal: spacing[3],
@@ -199,16 +246,29 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  section: { gap: spacing[3] },
+  section: { gap: spacing[2] },
   sectionLabel: {
     fontSize: 15,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
+  sectionHint: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginBottom: spacing[1],
+  },
+  empty: {
+    fontSize: 14,
+    fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
 
   concernCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing[3],
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -216,13 +276,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  concernBody: { flex: 1, minWidth: 0 },
   concernText: {
     flex: 1,
     fontSize: 14,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
+  concernMeta: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
+    marginTop: 4,
+  },
 
+  taskWrap: { gap: spacing[1] },
+  taskCircle: {
+    fontSize: 11,
+    fontFamily: 'OpenSans_600SemiBold',
+    color: colors.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   taskRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3] },
   checkbox: {
     width: 22,
@@ -231,7 +306,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     marginTop: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  checkboxDone: { borderWidth: 0 },
   taskContent: { flex: 1, gap: 2 },
   taskTitle: {
     fontSize: 14,
@@ -242,14 +320,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
-  },
-
-  updateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  updateAvatar: { width: 32, height: 32, borderRadius: 16, flexShrink: 0 },
-  updateText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'OpenSans_400Regular',
-    color: colors.textPrimary,
   },
 });

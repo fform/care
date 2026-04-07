@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
+    "dev": "dotenv -e .env -- turbo dev",
+    "dev:api": "dotenv -e .env -- pnpm --filter @care/api dev",
+    "dev:app": "dotenv -e .env -- pnpm --filter @care/app dev",
+    "dev:web": "dotenv -e .env -- pnpm --filter @care/web dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -12,13 +15,15 @@
     "start:api": "pnpm --filter @care/api db:migrate && pnpm --filter @care/api start",
     "build:web": "pnpm --filter @care/web build",
     "start:web": "pnpm --filter @care/web start",
-    "ios": "pnpm --filter @care/app ios",
+    "ios": "dotenv -e .env -- pnpm --filter @care/app ios",
+    "maestro:app": "pnpm --filter @care/app maestro:test",
     "ship:api": "pnpm --filter @care/api type-check && railway up --service api --detach",
     "ship:web": "pnpm --filter @care/web type-check && railway up --service web --detach",
     "ship": "pnpm ship:api && pnpm ship:web",
     "start": "node scripts/railway-root-start.mjs"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
     "prettier": "^3.4.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0"

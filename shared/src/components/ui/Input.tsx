@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TextInput, TextInputProps, View, StyleSheet, Pressable } from 'react-native';
-import { MotiView } from 'moti';
+import { View as MotiView } from 'moti/build/components/view';
 import { Text } from './Text';
 import { colors, radius, spacing, textStyles, fontFamily } from '../../theme';
 

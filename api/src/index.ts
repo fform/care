@@ -1,4 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { config as loadEnv } from 'dotenv';
 import express from 'express';
+
+/** Package dir (`api/`) — works for both `src/` (tsx) and `dist/` (node). */
+const apiDir = path.join(__dirname, '..');
+const rootEnv = path.join(apiDir, '..', '.env');
+const localEnv = path.join(apiDir, '.env');
+if (fs.existsSync(rootEnv)) loadEnv({ path: rootEnv });
+if (fs.existsSync(localEnv)) loadEnv({ path: localEnv, override: true });
 import cors from 'cors';
 import helmet from 'helmet';
 import { authRouter, verifyJwt } from './auth';
@@ -25,7 +35,6 @@ app.use(express.json());
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/public', publicRouter);
 app.use('/auth', authRouter);

@@ -1,0 +1,53 @@
+# Persists session between runs (no clearState). If already logged in, skips credential entry.
+#
+# Credentials: export MAESTRO_TEST_EMAIL / MAESTRO_TEST_PASSWORD before running, or:
+#   pnpm exec maestro test -e MAESTRO_TEST_EMAIL=you@example.com -e MAESTRO_TEST_PASSWORD=secret maestro/flows/smoke_login.yaml
+#
+# Requires: Simulator + app installed, API reachable for email login (EXPO_PUBLIC_API_URL).
+# Shell: export MAESTRO_TEST_EMAIL MAESTRO_TEST_PASSWORD (see https://docs.maestro.dev/maestro-flows/flow-control-and-logic/parameters-and-constants )
+appId: com.fform.care
+---
+- launchApp
+- tapOn:
+    text: "Later"
+    optional: true
+# Fast path: already authenticated → Today tab root is visible.
+- runFlow:
+    optional: true
+    label: Already logged in — wait briefly for Today
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "today-screen"
+          timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: "login-screen"
+    label: Email/password sign-in
+    commands:
+      - runFlow:
+          when:
+            visible: "Create account"
+          label: Switch from sign-up to sign-in
+          commands:
+            - tapOn:
+                id: "login-mode-toggle"
+      - tapOn:
+          id: "login-email-input"
+      - eraseText
+      - inputText: ${MAESTRO_TEST_EMAIL || ""}
+      - tapOn:
+          id: "login-password-input"
+      - eraseText
+      - inputText: ${MAESTRO_TEST_PASSWORD || ""}
+      - hideKeyboard
+      - tapOn:
+          id: "login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- assertVisible:
+    id: "today-screen"
+- assertVisible: "Concerns"
