@@ -30,6 +30,7 @@ import { TAB_BAR_HIDE_ANIMATION_MS, navigateToTab, useNavigationStore } from '@/
 import { useChatStore } from '@/store/chat.store';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { ChatThread, Circle } from '@care/shared/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AVATAR_COLORS = ['#D4916E', '#B8724F', '#6B9E7A', '#E8C4AE', '#6B6B6B'];
 function avatarColor(seed: string): string {
@@ -69,6 +70,7 @@ export default function ChatScreen() {
   const [creatingThread, setCreatingThread] = useState(false);
 
   const circle = circles.find((c) => c.id === focusedCircleId);
+  const insets = useSafeAreaInsets();
 
   const hubRows: HubRow[] = useMemo(() => {
     const out: HubRow[] = [];
@@ -148,6 +150,7 @@ export default function ChatScreen() {
     useCallback(() => {
       return () => {
         setTabBarHideFromHubTransition(false);
+        setNewThreadOpen(false);
       };
     }, [setTabBarHideFromHubTransition]),
   );
@@ -408,34 +411,53 @@ export default function ChatScreen() {
           </Pressable>
         </View>
 
-        <Modal visible={newThreadOpen} animationType="fade" transparent>
-          <Pressable style={styles.modalBackdrop} onPress={() => setNewThreadOpen(false)}>
-            <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-              <Text style={styles.modalTitle}>New thread</Text>
-              <Text style={styles.modalHint}>Group messages by topic (e.g. appointments, meds).</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Thread title"
-                placeholderTextColor={colors.textMuted}
-                value={newThreadTitle}
-                onChangeText={setNewThreadTitle}
-                editable={!creatingThread}
+        {newThreadOpen ? (
+          <Modal
+            visible
+            animationType="fade"
+            transparent
+            onRequestClose={() => setNewThreadOpen(false)}
+          >
+            <View style={styles.modalRoot}>
+              <Pressable
+                style={styles.modalBackdropFill}
+                onPress={() => setNewThreadOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss"
               />
-              <View style={styles.modalActions}>
-                <Pressable style={styles.modalCancel} onPress={() => setNewThreadOpen(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modalSave, (!newThreadTitle.trim() || creatingThread) && styles.modalSaveOff]}
-                  disabled={!newThreadTitle.trim() || creatingThread}
-                  onPress={onCreateThread}
-                >
-                  <Text style={styles.modalSaveText}>{creatingThread ? 'Creating…' : 'Create'}</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
+                style={styles.modalKeyboardSheet}
+              >
+                <View style={[styles.modalCard, { paddingBottom: spacing[5] + insets.bottom }]}>
+                  <Text style={styles.modalTitle}>New thread</Text>
+                  <Text style={styles.modalHint}>Group messages by topic (e.g. appointments, meds).</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Thread title"
+                    placeholderTextColor={colors.textMuted}
+                    value={newThreadTitle}
+                    onChangeText={setNewThreadTitle}
+                    editable={!creatingThread}
+                  />
+                  <View style={styles.modalActions}>
+                    <Pressable style={styles.modalCancel} onPress={() => setNewThreadOpen(false)}>
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.modalSave, (!newThreadTitle.trim() || creatingThread) && styles.modalSaveOff]}
+                      disabled={!newThreadTitle.trim() || creatingThread}
+                      onPress={onCreateThread}
+                    >
+                      <Text style={styles.modalSaveText}>{creatingThread ? 'Creating…' : 'Create'}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </KeyboardAvoidingView>
+            </View>
+          </Modal>
+        ) : null}
       </KeyboardAvoidingView>
     </ScreenTopInset>
   );
@@ -614,10 +636,19 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
 
-  modalBackdrop: {
+  modalRoot: {
     flex: 1,
+  },
+  modalBackdropFill: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
+  },
+  modalKeyboardSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
   },
   modalCard: {
     backgroundColor: colors.background,
