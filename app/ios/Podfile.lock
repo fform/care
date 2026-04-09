@@ -101,6 +101,9 @@ PODS:
     - ExpoModulesCore
   - ExpoSymbols (55.0.5):
     - ExpoModulesCore
+  - ExpoUI (55.0.10):
+    - ExpoModulesCore
+    - React-RCTFabric
   - ExpoWebBrowser (55.0.10):
     - ExpoModulesCore
   - EXStructuredHeaders (55.0.0)
@@ -2299,6 +2302,7 @@ DEPENDENCIES:
   - "ExpoSecureStore (from `../../node_modules/.pnpm/expo-secure-store@55.0.9_expo@55.0.9/node_modules/expo-secure-store/ios`)"
   - "ExpoSplashScreen (from `../../node_modules/.pnpm/expo-splash-screen@55.0.13_expo@55.0.9_typescript@5.9.3/node_modules/expo-splash-screen/ios`)"
   - "ExpoSymbols (from `../../node_modules/.pnpm/expo-symbols@55.0.5_expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@reac_adkvckurmwntgg7azmqz4m5xqm/node_modules/expo-symbols/ios`)"
+  - "ExpoUI (from `../../node_modules/.pnpm/@expo+ui@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-confi_r3sqkmpoi6o6d22mw3ke532aqq/node_modules/@expo/ui/ios`)"
   - "ExpoWebBrowser (from `../../node_modules/.pnpm/expo-web-browser@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_tflmvrzwcndhd7l5y4qchxci2a/node_modules/expo-web-browser/ios`)"
   - "EXStructuredHeaders (from `../../node_modules/.pnpm/expo-structured-headers@55.0.0/node_modules/expo-structured-headers/ios`)"
   - "EXUpdates (from `../../node_modules/.pnpm/expo-updates@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-c_4vyfbo2adudoubp5njkmwlbdk4/node_modules/expo-updates/ios`)"
@@ -2444,6 +2448,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/expo-splash-screen@55.0.13_expo@55.0.9_typescript@5.9.3/node_modules/expo-splash-screen/ios"
   ExpoSymbols:
     :path: "../../node_modules/.pnpm/expo-symbols@55.0.5_expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@reac_adkvckurmwntgg7azmqz4m5xqm/node_modules/expo-symbols/ios"
+  ExpoUI:
+    :path: "../../node_modules/.pnpm/@expo+ui@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-confi_r3sqkmpoi6o6d22mw3ke532aqq/node_modules/@expo/ui/ios"
   ExpoWebBrowser:
     :path: "../../node_modules/.pnpm/expo-web-browser@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_tflmvrzwcndhd7l5y4qchxci2a/node_modules/expo-web-browser/ios"
   EXStructuredHeaders:
@@ -2637,6 +2643,7 @@ SPEC CHECKSUMS:
   ExpoSecureStore: 83d31183fecaae7a084e88e29d14d5a02d90882a
   ExpoSplashScreen: ab4d4c72364d5f60ca91c5b44ce00ec65a8a5950
   ExpoSymbols: 3d67a96643245a5d933ce7fbf535f95eb541f617
+  ExpoUI: a5e7e1b88dadf6ad2fe3c2266d496044fd082142
   ExpoWebBrowser: 04fdc3b0619d6708f931a9d0f8850903cc38d896
   EXStructuredHeaders: aa49a5557fa24aa61dda4ac665f3987bf3e9e35d
   EXUpdates: c271f39754f424ad019775023d724c5b521c9950

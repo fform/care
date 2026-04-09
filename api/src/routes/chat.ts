@@ -13,6 +13,86 @@ const postMessageSchema = z.object({
   body: z.string().min(1).max(8000),
 });
 
+const patchReadSchema = z.object({
+  lastReadAt: z.string().min(1),
+});
+
+/** Unread = messages from others with createdAt after the user’s read cursor (per thread). */
+chatRouter.get('/unread-summary', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+
+    const rows = await prisma.$queryRaw<{ threadId: string; c: bigint }[]>`
+      SELECT m."threadId", COUNT(*)::bigint AS c
+      FROM "app"."ChatMessage" m
+      INNER JOIN "app"."ChatThread" t ON t.id = m."threadId"
+      INNER JOIN "app"."CircleMember" cm ON cm."circleId" = t."circleId" AND cm."userId" = ${userId}
+      WHERE m."userId" <> ${userId}
+      AND m."createdAt" > COALESCE(
+        (SELECT r."lastReadAt" FROM "app"."ChatThreadRead" r
+         WHERE r."userId" = ${userId} AND r."threadId" = m."threadId"
+         LIMIT 1),
+        TIMESTAMP '1970-01-01'
+      )
+      GROUP BY m."threadId"
+    `;
+
+    const byThread: Record<string, number> = {};
+    let totalUnread = 0;
+    for (const r of rows) {
+      const n = Number(r.c);
+      byThread[r.threadId] = n;
+      totalUnread += n;
+    }
+
+    res.json({
+      data: {
+        totalUnread,
+        byThread,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+chatRouter.patch('/threads/:threadId/read', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { threadId } = req.params;
+    const body = patchReadSchema.parse(req.body);
+
+    const incoming = new Date(body.lastReadAt);
+    if (Number.isNaN(incoming.getTime())) {
+      throw new HttpError(400, 'Invalid lastReadAt');
+    }
+
+    const thread = await prisma.chatThread.findUnique({ where: { id: threadId } });
+    if (!thread) {
+      throw new HttpError(404, 'Thread not found');
+    }
+    await requireCircleMember(userId, thread.circleId);
+
+    const existing = await prisma.chatThreadRead.findUnique({
+      where: { userId_threadId: { userId, threadId } },
+    });
+    const epoch = new Date(0);
+    const merged = new Date(
+      Math.max((existing?.lastReadAt ?? epoch).getTime(), incoming.getTime()),
+    );
+
+    const row = await prisma.chatThreadRead.upsert({
+      where: { userId_threadId: { userId, threadId } },
+      create: { userId, threadId, lastReadAt: merged },
+      update: { lastReadAt: merged },
+    });
+
+    res.json({ data: { lastReadAt: row.lastReadAt.toISOString() } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 chatRouter.get('/threads/:threadId/messages', async (req, res, next) => {
   try {
     const userId = getUserId(req);

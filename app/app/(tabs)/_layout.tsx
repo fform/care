@@ -27,6 +27,7 @@ import {
 import { colors, radius } from '@care/shared/theme';
 import { TAB_BAR_HIDE_ANIMATION_MS, registerTabNavigator, useNavigationStore } from '@/store/navigation.store';
 import { useCirclesStore } from '@/store/circles.store';
+import { useChatStore } from '@/store/chat.store';
 
 const TAB_ICON_SIZE = 22;
 const TAB_ICON_SELECTED = 27;
@@ -144,11 +145,20 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
   const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
   const tabBarHidden = useNavigationStore((s) => s.tabBarHidden);
+  const circles = useCirclesStore((s) => s.circles);
+  const totalUnread = useChatStore((s) => s.totalUnread);
+  const fetchUnreadSummary = useChatStore((s) => s.fetchUnreadSummary);
   const [tabBarHeight, setTabBarHeight] = useState(0);
 
   useEffect(() => {
     registerTabNavigator((name) => navigation.navigate(name));
   }, [navigation]);
+
+  useEffect(() => {
+    if (circles.length > 0) {
+      fetchUnreadSummary();
+    }
+  }, [circles.length, fetchUnreadSummary]);
 
   const visibleRoutes = state.routes.filter(
     (r) => !(focusedCircleId && r.name === 'circles')
@@ -306,6 +316,15 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
                   size: TAB_ICON_SIZE,
                 });
 
+                const chatUnreadBadge =
+                  route.name === 'chat' && totalUnread > 0 ? (
+                    <View style={styles.tabUnreadBadge}>
+                      <Text style={styles.tabUnreadBadgeText}>
+                        {totalUnread > 99 ? '99+' : totalUnread}
+                      </Text>
+                    </View>
+                  ) : null;
+
                 return (
                   <Pressable
                     key={route.key}
@@ -323,7 +342,10 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
                       pointerEvents={isFocused ? 'auto' : 'none'}
                     >
                       <View style={styles.tabLayerFill}>
-                        {iconSelected}
+                        <View style={styles.tabIconBadgeWrap}>
+                          {iconSelected}
+                          {isFocused ? chatUnreadBadge : null}
+                        </View>
                       </View>
                     </MotiView>
                     <MotiView
@@ -334,7 +356,10 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
                     >
                       <View style={styles.tabLayerFill}>
                         <View style={styles.tabIdleColumn}>
-                          {iconIdle}
+                          <View style={styles.tabIconBadgeWrap}>
+                            {iconIdle}
+                            {!isFocused ? chatUnreadBadge : null}
+                          </View>
                           <Text style={styles.labelMuted} numberOfLines={1}>
                             {label}
                           </Text>
@@ -486,5 +511,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.3,
     textAlign: 'center',
+  },
+  tabIconBadgeWrap: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabUnreadBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -10,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.concern,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabUnreadBadgeText: {
+    fontSize: 10,
+    fontFamily: 'OpenSans_700Bold',
+    color: colors.textInverse,
   },
 });

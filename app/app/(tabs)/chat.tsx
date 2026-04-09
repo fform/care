@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { View as MotiView } from 'moti/build/components/view';
 import { CaretLeft, ChatCircle, Circle as CircleIcon, PaperPlaneTilt, Plus } from 'phosphor-react-native';
 import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { ScreenEmptyState } from '@/components/ScreenEmptyState';
@@ -29,15 +28,9 @@ import { useCirclesStore } from '@/store/circles.store';
 import { TAB_BAR_HIDE_ANIMATION_MS, navigateToTab, useNavigationStore } from '@/store/navigation.store';
 import { useChatStore } from '@/store/chat.store';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { ChatMessageList } from '@/components/ChatMessageList';
 import type { ChatThread, Circle } from '@care/shared/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const AVATAR_COLORS = ['#D4916E', '#B8724F', '#6B9E7A', '#E8C4AE', '#6B6B6B'];
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 type HubRow = { thread: ChatThread; circle: Circle };
 
@@ -59,6 +52,8 @@ export default function ChatScreen() {
   const createThread = useChatStore((s) => s.createThread);
   const threadsByCircle = useChatStore((s) => s.threadsByCircle);
   const messagesByThread = useChatStore((s) => s.messagesByThread);
+  const unreadByThread = useChatStore((s) => s.unreadByThread);
+  const fetchUnreadSummary = useChatStore((s) => s.fetchUnreadSummary);
 
   const [message, setMessage] = useState('');
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -96,13 +91,15 @@ export default function ChatScreen() {
     }
     let cancelled = false;
     setHubLoading(true);
-    fetchThreadsForCircles(circles.map((c) => c.id)).finally(() => {
-      if (!cancelled) setHubLoading(false);
-    });
+    fetchThreadsForCircles(circles.map((c) => c.id))
+      .then(() => fetchUnreadSummary())
+      .finally(() => {
+        if (!cancelled) setHubLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [focusedCircleId, circles, fetchThreadsForCircles]);
+  }, [focusedCircleId, circles, fetchThreadsForCircles, fetchUnreadSummary]);
 
   const load = useCallback(async () => {
     if (!focusedCircleId) {
@@ -125,8 +122,9 @@ export default function ChatScreen() {
       }
     } finally {
       setLoading(false);
+      fetchUnreadSummary();
     }
-  }, [focusedCircleId, threadIdParam, fetchThreads, fetchMessages]);
+  }, [focusedCircleId, threadIdParam, fetchThreads, fetchMessages, fetchUnreadSummary]);
 
   useEffect(() => {
     load();
@@ -148,11 +146,12 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      fetchUnreadSummary();
       return () => {
         setTabBarHideFromHubTransition(false);
         setNewThreadOpen(false);
       };
-    }, [setTabBarHideFromHubTransition]),
+    }, [fetchUnreadSummary, setTabBarHideFromHubTransition]),
   );
 
   useEffect(() => {
@@ -239,23 +238,33 @@ export default function ChatScreen() {
             contentContainerStyle={styles.hubContent}
             showsVerticalScrollIndicator={false}
           >
-            {hubRows.map(({ thread, circle: c }) => (
-              <Pressable
-                key={`${c.id}-${thread.id}`}
-                style={styles.hubRow}
-                onPress={() => openThreadFromHub(c.id, thread.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`${c.name}, ${thread.title}`}
-              >
-                <View style={styles.hubRowText}>
-                  <Text style={styles.hubCircle}>{c.name}</Text>
-                  <Text style={styles.hubThread} numberOfLines={2}>
-                    {thread.title}
-                  </Text>
-                </View>
-                <Text style={styles.hubChevron}>›</Text>
-              </Pressable>
-            ))}
+            {hubRows.map(({ thread, circle: c }) => {
+              const n = unreadByThread[thread.id] ?? 0;
+              return (
+                <Pressable
+                  key={`${c.id}-${thread.id}`}
+                  style={styles.hubRow}
+                  onPress={() => openThreadFromHub(c.id, thread.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.name}, ${thread.title}`}
+                >
+                  <View style={styles.hubRowText}>
+                    <Text style={styles.hubCircle}>{c.name}</Text>
+                    <View style={styles.hubTitleRow}>
+                      <Text style={styles.hubThread} numberOfLines={2}>
+                        {thread.title}
+                      </Text>
+                      {n > 0 ? (
+                        <View style={styles.hubUnreadBadge}>
+                          <Text style={styles.hubUnreadText}>{n > 99 ? '99+' : n}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Text style={styles.hubChevron}>›</Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
         )}
       </ScreenTopInset>
@@ -329,29 +338,50 @@ export default function ChatScreen() {
               style={styles.threadScroll}
               contentContainerStyle={styles.threadRow}
             >
-              {threads.map((th) => (
-                <Pressable
-                  key={th.id}
-                  style={[styles.threadChip, activeThreadId === th.id && styles.threadChipOn]}
-                  onPress={() => {
-                    setActiveThreadId(th.id);
-                    fetchMessages(th.id);
-                  }}
-                >
-                  <Text style={[styles.threadChipText, activeThreadId === th.id && styles.threadChipTextOn]}>
-                    {th.title}
-                  </Text>
-                </Pressable>
-              ))}
+              {threads.map((th) => {
+                const n = unreadByThread[th.id] ?? 0;
+                return (
+                  <Pressable
+                    key={th.id}
+                    style={[styles.threadChip, activeThreadId === th.id && styles.threadChipOn]}
+                    onPress={() => {
+                      setActiveThreadId(th.id);
+                      fetchMessages(th.id);
+                    }}
+                  >
+                    <View style={styles.threadChipInner}>
+                      <Text
+                        style={[styles.threadChipText, activeThreadId === th.id && styles.threadChipTextOn]}
+                        numberOfLines={1}
+                      >
+                        {th.title}
+                      </Text>
+                      {n > 0 ? (
+                        <View
+                          style={[
+                            styles.threadUnreadBadge,
+                            activeThreadId === th.id && styles.threadUnreadBadgeOn,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.threadUnreadText,
+                              activeThreadId === th.id && styles.threadUnreadTextOn,
+                            ]}
+                          >
+                            {n > 99 ? '99+' : n}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
         ) : null}
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.messages}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.scroll}>
           {messages.length === 0 ? (
             <ScreenEmptyState
               icon={ChatCircle}
@@ -359,38 +389,14 @@ export default function ChatScreen() {
               body="Say hello — everyone in this circle can see this thread."
               testID="chat-empty-thread"
             />
+          ) : activeThreadId ? (
+            <ChatMessageList
+              threadId={activeThreadId}
+              messages={messages}
+              currentUserId={user?.id}
+            />
           ) : null}
-          {messages.map((msg, i) => {
-            const isYou = msg.userId === user?.id;
-            const initial = (msg.user?.name ?? '?').slice(0, 1).toUpperCase();
-            const t = new Date(msg.createdAt);
-            const time = t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-            return (
-              <MotiView
-                key={msg.id}
-                from={{ opacity: 0, translateY: 6 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'spring', damping: 20, delay: Math.min(i * 40, 400) }}
-                style={styles.message}
-              >
-                {!isYou ? (
-                  <View style={[styles.msgAvatar, { backgroundColor: avatarColor(msg.userId) }]}>
-                    <Text style={styles.msgInitial}>{initial}</Text>
-                  </View>
-                ) : (
-                  <View style={styles.msgSpacer} />
-                )}
-                <View style={[styles.msgBody, isYou && styles.msgBodyYou]}>
-                  <View style={styles.msgMeta}>
-                    <Text style={styles.msgAuthor}>{isYou ? 'You' : (msg.user?.name ?? 'Member')}</Text>
-                    <Text style={styles.msgTime}>{time}</Text>
-                  </View>
-                  <Text style={styles.msgText}>{msg.body}</Text>
-                </View>
-              </MotiView>
-            );
-          })}
-        </ScrollView>
+        </View>
 
         <View style={styles.inputBar}>
           <TextInput
@@ -482,6 +488,26 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   hubRowText: { flex: 1, minWidth: 0, gap: 4 },
+  hubTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    flexWrap: 'wrap',
+  },
+  hubUnreadBadge: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 7,
+    borderRadius: 11,
+    backgroundColor: colors.concern,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubUnreadText: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_700Bold',
+    color: colors.textInverse,
+  },
   hubCircle: {
     fontSize: 11,
     fontFamily: 'OpenSans_600SemiBold',
@@ -540,6 +566,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
+  threadChipInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 200,
+  },
   threadChipOn: {
     borderColor: colors.primary,
     backgroundColor: colors.accentBg,
@@ -548,58 +580,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
+    flexShrink: 1,
   },
   threadChipTextOn: { color: colors.primary },
-
-  messages: {
-    padding: spacing[5],
-    gap: spacing[4],
-    paddingBottom: spacing[4],
-  },
-  message: { flexDirection: 'row', gap: spacing[3], alignItems: 'flex-start' },
-  msgSpacer: { width: 36 },
-  msgAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  threadUnreadBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.concern,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
-  msgInitial: {
-    fontSize: 14,
+  threadUnreadBadgeOn: {
+    backgroundColor: colors.primary,
+  },
+  threadUnreadText: {
+    fontSize: 10,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textInverse,
   },
-  msgBody: {
-    flex: 1,
-    gap: spacing[1],
-    maxWidth: '88%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  msgBodyYou: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.accentBg,
-  },
-  msgMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  msgAuthor: {
-    fontSize: 13,
-    fontFamily: 'OpenSans_600SemiBold',
-    color: colors.textPrimary,
-  },
-  msgTime: {
-    fontSize: 11,
-    fontFamily: 'OpenSans_400Regular',
-    color: colors.textMuted,
-  },
-  msgText: {
-    fontSize: 14,
-    fontFamily: 'OpenSans_400Regular',
-    color: colors.textSecondary,
-    lineHeight: 21,
+  threadUnreadTextOn: {
+    color: colors.textInverse,
   },
 
   inputBar: {

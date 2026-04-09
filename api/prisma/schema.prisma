@@ -72,6 +72,7 @@ model User {
   completedTasks  Task[]         @relation("CompletedTasks")
   slotCompletions TaskSlotCompletion[] @relation("SlotCompleter")
   chatMessages    ChatMessage[]
+  chatThreadReads ChatThreadRead[]
   aiSuggestions   AiSuggestedAction[]
 
   @@map("User")
@@ -228,10 +229,27 @@ model ChatThread {
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  circle   Circle        @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  circle   Circle            @relation(fields: [circleId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
+  reads    ChatThreadRead[]
 
   @@map("ChatThread")
+  @@schema("app")
+}
+
+/// Per-user read cursor for a thread (messages at or before lastReadAt count as seen).
+model ChatThreadRead {
+  id         String   @id @default(cuid())
+  userId     String
+  threadId   String
+  lastReadAt DateTime
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@index([userId])
+  @@map("ChatThreadRead")
   @@schema("app")
 }
 

@@ -16,3 +16,9 @@ export interface ChatMessage {
   createdAt: string;
   user: Pick<User, 'id' | 'name' | 'avatarUrl'>;
 }
+
+/** Counts of messages from others after the user’s read cursor, keyed by thread id. */
+export interface ChatUnreadSummary {
+  totalUnread: number;
+  byThread: Record<string, number>;
+}

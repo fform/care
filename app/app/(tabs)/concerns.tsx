@@ -1,19 +1,41 @@
 /**
  * Concerns — time-sensitive items (API), grouped by circle in white rounded sections.
  */
-import { useCallback, useEffect, useMemo } from 'react';
-import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { Warning, CheckCircle, Flag } from 'phosphor-react-native';
+import { Warning, CheckCircle, Flag, Plus } from 'phosphor-react-native';
 import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { ScreenEmptyState } from '@/components/ScreenEmptyState';
+import { ConcernEntryModal } from '@/components/ConcernEntryModal';
 import { Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useCirclesStore } from '@/store/circles.store';
 import { useNavigationStore } from '@/store/navigation.store';
-import type { Concern } from '@care/shared/types';
-import type { Circle } from '@care/shared/types';
+import type { Circle, Concern } from '@care/shared/types';
+
+function formatDueLabel(iso: string) {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
 
 export default function ConcernsScreen() {
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
@@ -23,6 +45,8 @@ export default function ConcernsScreen() {
   const fetchCircles = useCirclesStore((s) => s.fetchCircles);
   const refreshAllSummaries = useCirclesStore((s) => s.refreshAllSummaries);
   const resolveConcern = useCirclesStore((s) => s.resolveConcern);
+
+  const [entryOpen, setEntryOpen] = useState(false);
 
   const circleName = circles.find((c) => c.id === focusedCircleId)?.name ?? '';
 
@@ -58,12 +82,32 @@ export default function ConcernsScreen() {
 
   return (
     <ScreenTopInset testID="concerns-screen">
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScreenHeader title="Concerns" subtitle={subtitle} />
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ScreenHeader
+            title="Concerns"
+            subtitle={subtitle}
+            right={
+              circles.length > 0 ? (
+                <Pressable
+                  style={styles.fab}
+                  onPress={() => setEntryOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add concern"
+                >
+                  <Plus size={20} color={colors.textInverse} weight="bold" />
+                </Pressable>
+              ) : null
+            }
+          />
 
         {circles.length === 0 ? (
           <ScreenEmptyState
@@ -95,6 +139,9 @@ export default function ConcernsScreen() {
                       {concern.description ? (
                         <Text style={styles.cardDesc}>{concern.description}</Text>
                       ) : null}
+                      {concern.dueAt ? (
+                        <Text style={styles.cardDue}>Due {formatDueLabel(concern.dueAt)}</Text>
+                      ) : null}
                     </View>
                     <Pressable
                       style={styles.resolveBtn}
@@ -110,12 +157,29 @@ export default function ConcernsScreen() {
             </View>
           ))
         )}
-      </ScrollView>
+        </ScrollView>
+
+        <ConcernEntryModal
+          visible={entryOpen}
+          onDismiss={() => setEntryOpen(false)}
+          circles={circles}
+          initialCircleId={focusedCircleId}
+        />
+      </KeyboardAvoidingView>
     </ScreenTopInset>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  fab: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scroll: { flex: 1 },
   content: {
     paddingBottom: spacing[10],
@@ -163,6 +227,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textSecondary,
+  },
+  cardDue: {
+    fontSize: 12,
+    fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
+    marginTop: 2,
   },
   resolveBtn: { padding: spacing[1] },
 });

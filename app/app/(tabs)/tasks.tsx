@@ -1,12 +1,20 @@
 /**
  * Tasks — checklist & repeating care; due soon first, then the rest.
  */
-import { useCallback, useEffect, useMemo } from 'react';
-import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { CheckCircle, Clipboard } from 'phosphor-react-native';
+import { CheckCircle, Clipboard, Plus } from 'phosphor-react-native';
 import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { ScreenEmptyState } from '@/components/ScreenEmptyState';
+import { TaskEntryModal } from '@/components/TaskEntryModal';
 import { Text } from '@care/shared/components';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -46,6 +54,8 @@ export default function TasksScreen() {
   const fetchCircles = useCirclesStore((s) => s.fetchCircles);
   const refreshAllSummaries = useCirclesStore((s) => s.refreshAllSummaries);
   const completeTask = useCirclesStore((s) => s.completeTask);
+
+  const [entryOpen, setEntryOpen] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -133,12 +143,32 @@ export default function TasksScreen() {
 
   return (
     <ScreenTopInset testID="tasks-screen">
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScreenHeader title="Tasks" subtitle={subtitle} />
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ScreenHeader
+            title="Tasks"
+            subtitle={subtitle}
+            right={
+              circles.length > 0 ? (
+                <Pressable
+                  style={styles.fab}
+                  onPress={() => setEntryOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add task"
+                >
+                  <Plus size={20} color={colors.textInverse} weight="bold" />
+                </Pressable>
+              ) : null
+            }
+          />
 
         {empty ? (
           <ScreenEmptyState
@@ -163,12 +193,29 @@ export default function TasksScreen() {
             ) : null}
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+
+        <TaskEntryModal
+          visible={entryOpen}
+          onDismiss={() => setEntryOpen(false)}
+          circles={circles}
+          initialCircleId={focusedCircleId}
+        />
+      </KeyboardAvoidingView>
     </ScreenTopInset>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  fab: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scroll: { flex: 1 },
   content: {
     paddingBottom: spacing[10],

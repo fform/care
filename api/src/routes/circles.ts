@@ -10,6 +10,7 @@ import { sendPostmarkEmail } from '../lib/postmark';
 import {
   circleDto,
   concernDto,
+  planDto,
   scheduleDto,
   taskDto,
   threadDto,
@@ -44,6 +45,7 @@ const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   concernId: z.string().optional(),
+  planId: z.string().optional(),
   dueAt: z.string().optional(),
   isRecurring: z.boolean().optional(),
   recurrenceSlotTimes: z.array(z.string().regex(/^\d{2}:\d{2}$/)).optional(),
@@ -263,12 +265,29 @@ circlesRouter.post('/:circleId/tasks', async (req, res, next) => {
       throw new HttpError(400, 'recurrenceSlotTimes required when isRecurring is true');
     }
 
+    let concernId: string | null = body.concernId ?? null;
+    if (concernId) {
+      const co = await prisma.concern.findFirst({ where: { id: concernId, circleId } });
+      if (!co) {
+        throw new HttpError(400, 'Concern not found in this circle');
+      }
+    }
+
+    let planId: string | null = body.planId ?? null;
+    if (planId) {
+      const plan = await prisma.plan.findFirst({ where: { id: planId, circleId } });
+      if (!plan) {
+        throw new HttpError(400, 'Plan not found in this circle');
+      }
+    }
+
     const task = await prisma.task.create({
       data: {
         circleId,
         title: body.title,
         description: body.description ?? null,
-        concernId: body.concernId ?? null,
+        concernId,
+        planId,
         dueAt: body.dueAt ? new Date(body.dueAt) : null,
         isRecurring,
         recurrenceSlotTimes: isRecurring && times ? times : undefined,
@@ -315,6 +334,22 @@ circlesRouter.get('/:circleId/concerns', async (req, res, next) => {
   }
 });
 
+circlesRouter.get('/:circleId/plans', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { circleId } = req.params;
+    await requireCircleMember(userId, circleId);
+
+    const rows = await prisma.plan.findMany({
+      where: { circleId },
+      orderBy: { title: 'asc' },
+    });
+    res.json({ data: rows.map(planDto) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 circlesRouter.post('/:circleId/concerns', async (req, res, next) => {
   try {
     const userId = getUserId(req);
@@ -322,13 +357,21 @@ circlesRouter.post('/:circleId/concerns', async (req, res, next) => {
     await requireCircleMember(userId, circleId);
     const body = createConcernSchema.parse(req.body);
 
+    let planId: string | null = body.planId ?? null;
+    if (planId) {
+      const plan = await prisma.plan.findFirst({ where: { id: planId, circleId } });
+      if (!plan) {
+        throw new HttpError(400, 'Plan not found in this circle');
+      }
+    }
+
     const c = await prisma.concern.create({
       data: {
         circleId,
         title: body.title,
         description: body.description ?? null,
         dueAt: body.dueAt ? new Date(body.dueAt) : null,
-        planId: body.planId ?? null,
+        planId,
       },
     });
     res.status(201).json({ data: concernDto(c) });

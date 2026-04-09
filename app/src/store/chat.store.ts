@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
-import type { ChatMessage, ChatThread } from '@care/shared/types';
+import type { ChatMessage, ChatThread, ChatUnreadSummary } from '@care/shared/types';
 import type { ApiResponse } from '@care/shared/types';
 
 interface ChatState {
   threadsByCircle: Record<string, ChatThread[]>;
   messagesByThread: Record<string, ChatMessage[]>;
+  /** Messages from others after read cursor; drives badges. */
+  unreadByThread: Record<string, number>;
+  totalUnread: number;
   fetchThreads: (circleId: string) => Promise<void>;
   /** Load threads for every circle (chat hub). */
   fetchThreadsForCircles: (circleIds: string[]) => Promise<void>;
@@ -14,11 +17,15 @@ interface ChatState {
   createThread: (circleId: string, title: string) => Promise<ChatThread>;
   /** Default thread for messaging (first fetch per circle). */
   getDefaultThreadId: (circleId: string) => string | null;
+  fetchUnreadSummary: () => Promise<void>;
+  markThreadRead: (threadId: string, lastReadAt: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   threadsByCircle: {},
   messagesByThread: {},
+  unreadByThread: {},
+  totalUnread: 0,
 
   getDefaultThreadId: (circleId) => {
     const threads = get().threadsByCircle[circleId];
@@ -66,5 +73,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       };
     });
+  },
+
+  fetchUnreadSummary: async () => {
+    try {
+      const res = await api.get<ApiResponse<ChatUnreadSummary>>('/chat/unread-summary');
+      set({
+        totalUnread: res.data.totalUnread,
+        unreadByThread: res.data.byThread,
+      });
+    } catch {
+      /* offline / unauthenticated */
+    }
+  },
+
+  markThreadRead: async (threadId, lastReadAt) => {
+    await api.patch(`/chat/threads/${threadId}/read`, { lastReadAt });
+    await get().fetchUnreadSummary();
   },
 }));

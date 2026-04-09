@@ -33,6 +33,22 @@ interface CirclesState {
     opts?: { date: string; slotIndex?: number; notes?: string }
   ) => Promise<void>;
   resolveConcern: (concernId: string, circleId: string) => Promise<void>;
+  createConcern: (
+    circleId: string,
+    body: { title: string; description?: string; dueAt?: string; planId?: string }
+  ) => Promise<void>;
+  createTask: (
+    circleId: string,
+    body: {
+      title: string;
+      description?: string;
+      dueAt?: string;
+      planId?: string;
+      concernId?: string;
+      isRecurring?: boolean;
+      recurrenceSlotTimes?: string[];
+    }
+  ) => Promise<void>;
 }
 
 export const useCirclesStore = create<CirclesState>((set, get) => ({
@@ -115,5 +131,15 @@ export const useCirclesStore = create<CirclesState>((set, get) => ({
       resolvedAt: new Date().toISOString(),
     });
     await get().fetchConcerns(circleId);
+  },
+
+  createConcern: async (circleId, body) => {
+    await api.post<ApiResponse<Concern>>(`/circles/${circleId}/concerns`, body);
+    await get().fetchConcerns(circleId);
+  },
+
+  createTask: async (circleId, body) => {
+    await api.post<ApiResponse<Task>>(`/circles/${circleId}/tasks`, body);
+    await get().fetchTasks(circleId);
   },
 }));

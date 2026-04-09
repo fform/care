@@ -1,16 +1,17 @@
 /**
  * Today screen — Daily Brief (API)
  */
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { View as MotiView } from 'moti/build/components/view';
-import { useRouter } from 'expo-router';
-import { Warning, User, CheckCircle, Flag, Clipboard } from 'phosphor-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { Warning, User, CheckCircle, Flag, Clipboard, ChatCircle } from 'phosphor-react-native';
 import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { ScreenEmptyState } from '@/components/ScreenEmptyState';
 import { colors, spacing, radius } from '@care/shared/theme';
 import { useAuthStore } from '@/store/auth.store';
 import { useCirclesStore } from '@/store/circles.store';
+import { useChatStore } from '@/store/chat.store';
 import { useNavigationStore } from '@/store/navigation.store';
 import { Text } from '@care/shared/components';
 import type { Concern, Task } from '@care/shared/types';
@@ -27,12 +28,21 @@ export default function TodayScreen() {
   const fetchCircles = useCirclesStore((s) => s.fetchCircles);
   const fetchTasks = useCirclesStore((s) => s.fetchTasks);
   const completeTask = useCirclesStore((s) => s.completeTask);
+  const totalUnread = useChatStore((s) => s.totalUnread);
+  const fetchUnreadSummary = useChatStore((s) => s.fetchUnreadSummary);
 
   useEffect(() => {
     fetchCircles().then(() => {
       useCirclesStore.getState().refreshAllSummaries();
+      fetchUnreadSummary();
     });
-  }, [fetchCircles]);
+  }, [fetchCircles, fetchUnreadSummary]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadSummary();
+    }, [fetchUnreadSummary]),
+  );
 
   useEffect(() => {
     if (focusedCircleId) {
@@ -110,6 +120,28 @@ export default function TodayScreen() {
             </View>
           </View>
         </MotiView>
+
+        {totalUnread > 0 ? (
+          <MotiView
+            from={{ opacity: 0, translateY: 6 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', damping: 20, delay: 40 }}
+            style={styles.unreadWrap}
+          >
+            <Pressable
+              style={styles.unreadRow}
+              onPress={() => router.push('/(tabs)/chat')}
+              accessibilityRole="button"
+              accessibilityLabel={`${totalUnread} unread messages, open chat`}
+            >
+              <ChatCircle size={22} color={colors.primary} weight="fill" />
+              <Text style={styles.unreadText}>
+                {totalUnread} unread message{totalUnread === 1 ? '' : 's'}
+              </Text>
+              <Text style={styles.unreadChevron}>›</Text>
+            </Pressable>
+          </MotiView>
+        ) : null}
 
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
@@ -253,6 +285,29 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
+    color: colors.textMuted,
+  },
+
+  unreadWrap: { marginBottom: -spacing[1] },
+  unreadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  unreadText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'OpenSans_600SemiBold',
+    color: colors.textPrimary,
+  },
+  unreadChevron: {
+    fontSize: 22,
     color: colors.textMuted,
   },
 

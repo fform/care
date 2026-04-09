@@ -4,6 +4,7 @@ import type {
   User,
   Task as PrismaTask,
   Concern as PrismaConcern,
+  Plan as PrismaPlan,
   TaskSlotCompletion,
   Schedule as PrismaSchedule,
   ChatThread,
@@ -41,6 +42,17 @@ export function circleDto(
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
     members: c.members.map(memberDto),
+  };
+}
+
+export function planDto(p: PrismaPlan) {
+  return {
+    id: p.id,
+    circleId: p.circleId,
+    title: p.title,
+    description: p.description ?? null,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
   };
 }
 
