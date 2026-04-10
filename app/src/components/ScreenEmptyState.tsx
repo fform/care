@@ -47,13 +47,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
     textAlign: 'center',
   },
   body: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     textAlign: 'center',

@@ -150,6 +150,7 @@ export default function CirclesScreen() {
                 >
                   <CircleCard
                     circle={circle}
+                    testID={i === 0 ? 'circle-card-first' : undefined}
                     onOpen={() => {
                       setFocusedCircleId(circle.id);
                       router.push('/');
@@ -209,13 +210,21 @@ export default function CirclesScreen() {
   );
 }
 
-function CircleCard({ circle, onOpen }: { circle: Circle; onOpen: () => void }) {
+function CircleCard({
+  circle,
+  onOpen,
+  testID,
+}: {
+  circle: Circle;
+  onOpen: () => void;
+  testID?: string;
+}) {
   const { openConcerns, openTasks } = useCircleCounts(circle.id);
   const hasConcerns = openConcerns > 0;
   const { name, description, members } = circle;
 
   return (
-    <Pressable style={styles.card} onPress={onOpen}>
+    <Pressable style={styles.card} onPress={onOpen} testID={testID}>
       <View style={styles.cardTop}>
         <View style={styles.nameCol}>
           <Text style={styles.circleName} numberOfLines={2}>
@@ -294,7 +303,7 @@ const styles = StyleSheet.create({
   },
   nameCol: { flex: 1, minWidth: 0 },
   circleName: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
@@ -308,22 +317,22 @@ const styles = StyleSheet.create({
   badgeMuted: { backgroundColor: colors.border },
   badgeTasks: { backgroundColor: colors.accentBg },
   badgeText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textInverse,
   },
   badgeTextDark: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   circleDescription: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
   microcopy: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     lineHeight: 15,
@@ -350,12 +359,12 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
   },
   modalHint: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
@@ -365,7 +374,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
     backgroundColor: colors.surface,
@@ -373,7 +382,7 @@ const styles = StyleSheet.create({
   modalInputMulti: { minHeight: 72, textAlignVertical: 'top' },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing[3], marginTop: spacing[2] },
   modalCancel: { paddingVertical: spacing[3], paddingHorizontal: spacing[4] },
-  modalCancelText: { fontSize: 16, fontFamily: 'OpenSans_600SemiBold', color: colors.textMuted },
+  modalCancelText: { fontSize: 20, fontFamily: 'OpenSans_600SemiBold', color: colors.textMuted },
   modalSave: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
@@ -381,5 +390,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[6],
   },
   modalSaveOff: { opacity: 0.5 },
-  modalSaveText: { fontSize: 16, fontFamily: 'OpenSans_600SemiBold', color: colors.textInverse },
+  modalSaveText: { fontSize: 20, fontFamily: 'OpenSans_600SemiBold', color: colors.textInverse },
 });

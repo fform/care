@@ -265,7 +265,7 @@ export function DueDateTimeSection({
 const styles = StyleSheet.create({
   field: { gap: spacing[1], marginBottom: spacing[3] },
   label: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textSecondary,
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
     backgroundColor: colors.surface,
@@ -291,17 +291,17 @@ const styles = StyleSheet.create({
   },
   inputLikeDisabled: { opacity: 0.65 },
   inputLikeText: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
   inputLikePlaceholder: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
   clear: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.primary,
     marginBottom: spacing[2],
@@ -333,12 +333,12 @@ const styles = StyleSheet.create({
   },
   iosBtn: { paddingVertical: spacing[2], paddingHorizontal: spacing[3] },
   iosBtnCancel: {
-    fontSize: 17,
+    fontSize: 21,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
   },
   iosBtnDone: {
-    fontSize: 17,
+    fontSize: 21,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.primary,
   },

@@ -15,16 +15,17 @@ export const fontFamily = {
   bold: 'OpenSans_700Bold',
 } as const;
 
+/** Logical pt sizes: primary body is 19pt (Apple Body 17pt @ Large, plus one Dynamic-Type step). */
 export const fontSize = {
-  xs: 11,
-  sm: 13,
-  base: 15,
-  md: 17,
-  lg: 20,
-  xl: 24,
-  '2xl': 28,
-  '3xl': 34,
-  '4xl': 40,
+  xs: 13,
+  sm: 17,
+  base: 19,
+  md: 21,
+  lg: 26,
+  xl: 30,
+  '2xl': 36,
+  '3xl': 42,
+  '4xl': 50,
 } as const;
 
 export const lineHeight = {

@@ -47,6 +47,12 @@ const HIGHLIGHT_SPRING = {
   mass: 0.82,
 };
 
+/** Scale pulse during slide: 100% → 120% → 100%, peak at 50% with ease-in-out halves. */
+const HIGHLIGHT_SCALE_PEAK = 1.2;
+const HIGHLIGHT_SCALE_PULSE_MS = 380;
+const HIGHLIGHT_SCALE_PULSE_HALF_MS = HIGHLIGHT_SCALE_PULSE_MS / 2;
+const HIGHLIGHT_SCALE_EASING = Easing.inOut(Easing.ease);
+
 const CONTENT_TRANSITION = {
   type: 'timing' as const,
   duration: 185,
@@ -263,23 +269,45 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
             <View style={styles.tabBarTrack} pointerEvents="box-none">
               <MotiView
                 pointerEvents="none"
-                style={styles.selectionPillBase}
+                style={[
+                  styles.selectionPillFrame,
+                  { width: HIGHLIGHT_DIAMETER, height: HIGHLIGHT_DIAMETER },
+                ]}
                 from={{
                   left: 0,
                   top: 0,
-                  width: HIGHLIGHT_DIAMETER,
-                  height: HIGHLIGHT_DIAMETER,
                   opacity: 0,
                 }}
                 animate={{
                   left: pill.left,
                   top: pill.top,
-                  width: HIGHLIGHT_DIAMETER,
-                  height: HIGHLIGHT_DIAMETER,
                   opacity: pill.opacity,
                 }}
                 transition={HIGHLIGHT_SPRING}
-              />
+              >
+                <MotiView
+                  key={focusedKey ?? 'none'}
+                  pointerEvents="none"
+                  style={styles.selectionPillFill}
+                  from={{ scale: 1 }}
+                  animate={{
+                    scale: [
+                      {
+                        value: HIGHLIGHT_SCALE_PEAK,
+                        type: 'timing' as const,
+                        duration: HIGHLIGHT_SCALE_PULSE_HALF_MS,
+                        easing: HIGHLIGHT_SCALE_EASING,
+                      },
+                      {
+                        value: 1,
+                        type: 'timing' as const,
+                        duration: HIGHLIGHT_SCALE_PULSE_HALF_MS,
+                        easing: HIGHLIGHT_SCALE_EASING,
+                      },
+                    ],
+                  }}
+                />
+              </MotiView>
               <View style={styles.tabsRow} pointerEvents="box-none">
               {visibleRoutes.map((route) => {
                 const { options } = descriptors[route.key];
@@ -390,7 +418,15 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...(props as unknown as TabBarProps)} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+      }}
     >
       <Tabs.Screen
         name="index"
@@ -433,20 +469,32 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  /** Transparent so screen content shows through; only `pillShell` is opaque. */
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     paddingHorizontal: 21,
     paddingTop: 12,
   },
+  /** No overflow:hidden — would clip iOS shadow on the floating pill. */
   pillOuter: {
-    overflow: 'hidden',
     borderRadius: radius.full,
   },
   pillShell: {
     borderRadius: 36,
-    borderWidth: 1,
-    borderColor: colors.border,
+    // borderWidth: 1,
+    // borderColor: colors.border,
     backgroundColor: colors.surface,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   pillInner: {
     paddingVertical: 4,
@@ -460,11 +508,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: TAB_ROW_INNER_H,
   },
-  selectionPillBase: {
+  /** Position + slide spring only; fill is a child so scale doesn’t fight `left`/`top`. */
+  selectionPillFrame: {
     position: 'absolute',
+    zIndex: 0,
+  },
+  selectionPillFill: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.primary,
     borderRadius: 9999,
-    zIndex: 0,
   },
   tabsRow: {
     flexDirection: 'row',
@@ -506,7 +558,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   labelMuted: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
     letterSpacing: 0.3,
@@ -530,7 +582,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabUnreadBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textInverse,
   },

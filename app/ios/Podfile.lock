@@ -37,11 +37,13 @@ PODS:
     - ExpoModulesCore
   - ExpoAsset (55.0.10):
     - ExpoModulesCore
+  - ExpoAudio (55.0.13):
+    - ExpoModulesCore
   - ExpoCrypto (55.0.10):
     - ExpoModulesCore
   - ExpoDomWebView (55.0.3):
     - ExpoModulesCore
-  - ExpoFileSystem (55.0.12):
+  - ExpoFileSystem (55.0.16):
     - ExpoModulesCore
   - ExpoFont (55.0.4):
     - ExpoModulesCore
@@ -2286,9 +2288,10 @@ DEPENDENCIES:
   - "Expo (from `../../node_modules/.pnpm/expo@55.0.9_@babel+core@7.29.0_@expo+dom-webview@55.0.3_@expo+metro-runtime@55.0.7_expo-route_f4nxg36phi66feslpl5d4hzdqi/node_modules/expo`)"
   - "ExpoAppleAuthentication (from `../../node_modules/.pnpm/expo-apple-authentication@55.0.9_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-na_hklv2mhlcl37iv4gjebvh3exla/node_modules/expo-apple-authentication/ios`)"
   - "ExpoAsset (from `../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-con_fiskigirzp544qlr27622ka63q/node_modules/expo-asset/ios`)"
+  - "ExpoAudio (from `../../node_modules/.pnpm/expo-audio@55.0.13_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@rea_o3n2u7vghonqbmaglyg64mwihm/node_modules/expo-audio/ios`)"
   - "ExpoCrypto (from `../../node_modules/.pnpm/expo-crypto@55.0.10_expo@55.0.9/node_modules/expo-crypto/ios`)"
   - "ExpoDomWebView (from `../../node_modules/.pnpm/@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_d7bft6mjm3lxdf4ear6mmawgqq/node_modules/@expo/dom-webview/ios`)"
-  - "ExpoFileSystem (from `../../node_modules/.pnpm/expo-file-system@55.0.12_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_ikqdxi66sxyqvynll35cwqpnfm/node_modules/expo-file-system/ios`)"
+  - "ExpoFileSystem (from `../../node_modules/.pnpm/expo-file-system@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_ije3v52cjpjd76o5wi4bwtb6nu/node_modules/expo-file-system/ios`)"
   - "ExpoFont (from `../../node_modules/.pnpm/expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-confi_h3gdedt3xemnxkoyx463efcswu/node_modules/expo-font/ios`)"
   - "ExpoGlassEffect (from `../../node_modules/.pnpm/expo-glass-effect@55.0.8_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_hjpcgqcnwjzvo67sccsv32qulu/node_modules/expo-glass-effect/ios`)"
   - "ExpoImage (from `../../node_modules/.pnpm/expo-image@55.0.6_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-conf_g4wocao2hvx244bafihr7tyu2e/node_modules/expo-image/ios`)"
@@ -2416,12 +2419,14 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/expo-apple-authentication@55.0.9_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-na_hklv2mhlcl37iv4gjebvh3exla/node_modules/expo-apple-authentication/ios"
   ExpoAsset:
     :path: "../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-con_fiskigirzp544qlr27622ka63q/node_modules/expo-asset/ios"
+  ExpoAudio:
+    :path: "../../node_modules/.pnpm/expo-audio@55.0.13_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@rea_o3n2u7vghonqbmaglyg64mwihm/node_modules/expo-audio/ios"
   ExpoCrypto:
     :path: "../../node_modules/.pnpm/expo-crypto@55.0.10_expo@55.0.9/node_modules/expo-crypto/ios"
   ExpoDomWebView:
     :path: "../../node_modules/.pnpm/@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_d7bft6mjm3lxdf4ear6mmawgqq/node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
-    :path: "../../node_modules/.pnpm/expo-file-system@55.0.12_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_ikqdxi66sxyqvynll35cwqpnfm/node_modules/expo-file-system/ios"
+    :path: "../../node_modules/.pnpm/expo-file-system@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+met_ije3v52cjpjd76o5wi4bwtb6nu/node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../../node_modules/.pnpm/expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@react-native+metro-confi_h3gdedt3xemnxkoyx463efcswu/node_modules/expo-font/ios"
   ExpoGlassEffect:
@@ -2627,9 +2632,10 @@ SPEC CHECKSUMS:
   Expo: 55d24f07827a295a2860cbba79709fc0536adc96
   ExpoAppleAuthentication: 435cdf8a592ce69d769a74c67f241f113d812350
   ExpoAsset: 4efd0227e808dfa84d286aa3663ded641ef73479
+  ExpoAudio: effd4eb58abee67050f79e8764fe1078daea39c8
   ExpoCrypto: 33a6c4fb9ccac7a4d784954d0db6c3ba292123e9
   ExpoDomWebView: f101fb3db4b6eec4163fca51f7507189b7e48661
-  ExpoFileSystem: 4ed8ccc90671813c861f212fba3668fe133b7e68
+  ExpoFileSystem: 310d367cccbd30b9bda13c5865fe3d8d581dcf2a
   ExpoFont: 1aa465cf9f8ac6b670405becba8b15473581b2dd
   ExpoGlassEffect: 42361543f2c0c383df0cb779e3cd2496b47a585e
   ExpoImage: 53ab717157f29bb5139f9f75b259f93f784b6847

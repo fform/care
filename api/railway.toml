@@ -14,7 +14,7 @@ watchPatterns = [
 ]
 
 [deploy]
-preDeployCommand = ["pnpm --filter @care/api db:migrate"]
+# API: `pnpm start` → railway-root-start.mjs → `pnpm run start:api` (db:migrate then api start).
 # Same root entry as `web`: `scripts/railway-root-start.mjs` (see root package.json "start").
 startCommand = "pnpm start"
 healthcheckPath = "/health"

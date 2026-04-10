@@ -22,7 +22,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Care/Info.plist; sourceTree = "<group>"; };
 		3BE5ABA23BAE28371EF1512E /* libPods-Care.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Care.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D71E266CC7C3CB02BD9DBF2 /* Pods-Care.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Care.debug.xcconfig"; path = "Target Support Files/Pods-Care/Pods-Care.debug.xcconfig"; sourceTree = "<group>"; };
-		A8123FE2FD5C96E4E823BEE8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Care/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A8123FE2FD5C96E4E823BEE8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Care/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Care/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		C65D858DAF4264CE112C57C4 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Care/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -50,7 +50,6 @@
 				4D71E266CC7C3CB02BD9DBF2 /* Pods-Care.debug.xcconfig */,
 				E589042127CE32B4786E31DA /* Pods-Care.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};

@@ -193,12 +193,12 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   groupLabel: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   groupHeart: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginBottom: spacing[1],
@@ -219,17 +219,17 @@ const styles = StyleSheet.create({
   },
   cardBody: { flex: 1, minWidth: 0, gap: 4 },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   cardDesc: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textSecondary,
   },
   cardDue: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginTop: 2,

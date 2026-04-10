@@ -28,6 +28,7 @@ publicRouter.get('/invites/:code', async (req, res, next) => {
     res.json({
       data: {
         circleName: invite.circle.name,
+        circleDescription: invite.circle.description,
         heartName: invite.circle.heartName,
         inviterName: inviter?.name ?? 'Someone',
         expiresAt: invite.expiresAt?.toISOString() ?? null,

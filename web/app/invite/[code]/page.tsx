@@ -2,17 +2,21 @@ import { notFound } from 'next/navigation';
 
 type InviteData = {
   circleName: string;
+  circleDescription: string | null;
   heartName: string;
   inviterName: string;
   expiresAt: string | null;
 };
 
+/** Same default as `app/config.ts` production `apiUrl` — invite page SSR must reach the API that stored the invite. */
+const DEFAULT_CARE_API_ORIGIN = 'https://care-api.up.railway.app';
+
 async function fetchInvite(code: string): Promise<InviteData | null> {
-  const base = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
-  if (!base) {
-    return null;
-  }
-  const res = await fetch(`${base.replace(/\/$/, '')}/public/invites/${code}`, {
+  const base =
+    process.env.API_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    DEFAULT_CARE_API_ORIGIN;
+  const res = await fetch(`${base.replace(/\/$/, '')}/public/invites/${encodeURIComponent(code)}`, {
     next: { revalidate: 60 },
   });
   if (res.status === 404 || res.status === 410) {
@@ -26,8 +30,9 @@ async function fetchInvite(code: string): Promise<InviteData | null> {
 }
 
 const APP_SCHEME = process.env.NEXT_PUBLIC_APP_SCHEME ?? 'fformcare';
-const IOS_APP_STORE_URL =
-  process.env.NEXT_PUBLIC_IOS_APP_STORE_URL ?? 'https://apps.apple.com/app/id0000000000';
+/** Public beta until App Store listing exists */
+const IOS_INSTALL_URL =
+  process.env.NEXT_PUBLIC_IOS_TESTFLIGHT_URL ?? 'https://testflight.apple.com/join/w8SjNkv4';
 const ANDROID_PLAY_URL =
   process.env.NEXT_PUBLIC_ANDROID_PLAY_URL ??
   'https://play.google.com/store/apps/details?id=com.fform.care';
@@ -41,7 +46,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
 
   const deepLink = `${APP_SCHEME}://invite/${code}`;
   const play = `${ANDROID_PLAY_URL}`;
-  const ios = `${IOS_APP_STORE_URL}`;
+  const iosInstall = `${IOS_INSTALL_URL}`;
 
   return (
     <div
@@ -55,10 +60,21 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
     >
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>You’re invited</h1>
-        <p style={{ fontSize: 16, color: '#4a4a4a', marginBottom: 24 }}>
+        <p
+          style={{
+            fontSize: 16,
+            color: '#4a4a4a',
+            marginBottom: data.circleDescription ? 12 : 24,
+          }}
+        >
           <strong>{data.inviterName}</strong> invited you to care for{' '}
           <strong>{data.heartName}</strong> in the circle <strong>{data.circleName}</strong> on Care.
         </p>
+        {data.circleDescription ? (
+          <p style={{ fontSize: 15, color: '#4a4a4a', marginBottom: 24, lineHeight: 1.45 }}>
+            {data.circleDescription}
+          </p>
+        ) : null}
 
         <a
           href={deepLink}
@@ -78,13 +94,13 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
         </a>
 
         <p style={{ fontSize: 14, color: '#666', marginBottom: 24 }}>
-          If you don’t have the app yet, install it and sign in — then open this page again or paste
-          your invite from email.
+          If Care isn’t installed, use TestFlight (iOS) or Play Store (Android), sign in, then open this
+          link again — or tap Open in Care if the app is already installed.
         </p>
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <a
-            href={ios}
+            href={iosInstall}
             style={{
               flex: '1 1 140px',
               textAlign: 'center',
@@ -96,7 +112,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
               background: '#fff',
             }}
           >
-            App Store
+            Get Care (TestFlight)
           </a>
           <a
             href={play}

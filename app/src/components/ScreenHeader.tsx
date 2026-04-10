@@ -49,13 +49,13 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   title: {
-    fontSize: 26,
+    fontSize: 32,
     lineHeight: 34,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     lineHeight: 18,

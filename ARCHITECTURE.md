@@ -208,7 +208,7 @@ api/
 - Run migrations: `pnpm --filter @care/api db:migrate:dev`
 - DATABASE_URL injected from 1Password: `op://care/database/url`
 
-**Deployment:** Defined in `api/railway.toml` (Railway config-as-code). Build runs the workspace filter for `@care/api`; migrations run as `preDeployCommand`; runtime starts `node dist/index.js` via the package `start` script. Health check: `GET /health`.
+**Deployment:** Defined in `api/railway.toml` (Railway config-as-code). Build runs the workspace filter for `@care/api`; migrations run via root `start:api` (`db:migrate` then `start`) when the API service runs `pnpm start` → `railway-root-start.mjs`. Health check: `GET /health`.
 
 ---
 
@@ -272,7 +272,7 @@ op run --env-file=.env -- pnpm dev
 
 **Config as code:** `api/railway.toml` and `web/railway.toml` are the **only** source for builder, `buildCommand`, `startCommand`, `watchPatterns`, health checks, and restart policy. Dashboard values for those fields are overridden by the files ([Railway docs](https://docs.railway.com/reference/config-as-code)).
 
-**Root `package.json` `start` + `scripts/railway-root-start.mjs`:** Railpack only validates the **repository root** and requires a `start` script ([Railpack Node](https://railpack.com/languages/node)). There is a single root `start`; at **runtime** it branches on Railway’s `RAILWAY_SERVICE_NAME` (or optional `CARE_SERVICE=api|web`) so the **api** and **web** services each run the correct workspace package. Name services `api` and `web` in Railway, or set `CARE_SERVICE` per service. Both `api/railway.toml` and `web/railway.toml` use `deploy.startCommand = "pnpm start"` so deploy behavior matches this one entrypoint.
+**Root `package.json` `start` + `scripts/railway-root-start.mjs`:** Railpack only validates the **repository root** and requires a `start` script ([Railpack Node](https://railpack.com/languages/node)). There is a single root `start`; at **runtime** it branches on Railway’s `RAILWAY_SERVICE_NAME` (or optional `CARE_SERVICE=api|web`) so the **api** service runs `pnpm run start:api` (migrations + server) and **web** runs `@care/web`’s `start`. Name services `api` and `web` in Railway, or set `CARE_SERVICE` per service. Both `api/railway.toml` and `web/railway.toml` use `deploy.startCommand = "pnpm start"` so deploy behavior matches this one entrypoint.
 
 **Monorepo checkout:** Both services use the **repository root** as the working directory (not `api/` or `web/` alone) so `pnpm` workspaces and `shared/` resolve. Railway still needs to know **which** `railway.toml` applies to each service: in service settings, set the **config file path** to `api/railway.toml` or `web/railway.toml` respectively (see [Config as code](https://docs.railway.com/reference/config-as-code)). That one path pointer per service is structural, not duplicate command strings.
 

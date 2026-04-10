@@ -47,7 +47,7 @@ const target = resolveTarget();
 const args =
   target === 'web'
     ? ['pnpm', '--filter', '@care/web', 'start']
-    : ['pnpm', '--filter', '@care/api', 'start'];
+    : ['pnpm', 'run', 'start:api'];
 
 const result = spawnSync(args[0], args.slice(1), { stdio: 'inherit', env: process.env });
 process.exit(result.status === null ? 1 : result.status);

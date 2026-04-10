@@ -23,11 +23,9 @@ appId: com.fform.care
       id: "circles-screen"
     timeout: 5000
 
-# Tap the circle card (the whole card is pressable, tap its name)
+# Tap the first circle card (stable vs. regex index when typography/layout changes)
 - tapOn:
-    text: ".*"
-    index: 0
-    optional: false
+    id: "circle-card-first"
 
 # After focusing a circle we land on Today
 - extendedWaitUntil:

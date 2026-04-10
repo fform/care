@@ -7,6 +7,7 @@ export type AppEnv = 'dev' | 'preview' | 'production';
 
 export type AppConfig = {
   apiUrl: string;
+  webUrl: string;
   mixpanelToken: string;
   env: AppEnv;
 };
@@ -22,12 +23,14 @@ const env = envFromUpdatesChannel();
 
 const base: AppConfig = {
   apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://care-api.up.railway.app',
+  webUrl: 'https://care-web.up.railway.app',
   mixpanelToken: '',
   env,
 };
 
 if (env ==='dev') {
   base.apiUrl = 'https://mac-studio.tail28832a.ts.net';
+  base.webUrl = 'http://localhost:5000';
 }
 
 /**

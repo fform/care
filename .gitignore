@@ -41,3 +41,4 @@ app/android/app/build/
 
 # Turbo
 .turbo/
+*.ipa

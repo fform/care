@@ -21,6 +21,7 @@ import { publicRouter } from './routes/public';
 import { inviteAcceptRouter } from './routes/inviteAccept';
 import { tendRouter } from './routes/tend';
 import { aiSuggestionsRouter } from './routes/aiSuggestions';
+import { voiceRouter } from './routes/voice';
 import { errorHandler } from './middleware/error';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/chat', verifyJwt, chatRouter);
 app.use('/invites', verifyJwt, inviteAcceptRouter);
 app.use('/ai/tend', verifyJwt, tendRouter);
 app.use('/ai/suggestions', verifyJwt, aiSuggestionsRouter);
+app.use('/ai/voice', verifyJwt, voiceRouter);
 
 // ── Error handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);

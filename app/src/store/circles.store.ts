@@ -4,6 +4,17 @@ import { useNavigationStore } from './navigation.store';
 import type { Circle, Task, Concern } from '@care/shared/types';
 import type { ApiResponse, PaginatedResponse } from '@care/shared/types';
 
+export type CircleInviteListItem = {
+  id: string;
+  kind: string;
+  invitedEmail: string | null;
+  invitedPhone: string | null;
+  secretCode: string;
+  inviteUrl: string;
+  expiresAt: string | null;
+  createdAt: string;
+};
+
 export type CreateFromTemplateInput = {
   template: 'loved_one' | 'kid' | 'pet';
   name: string;
@@ -49,6 +60,9 @@ interface CirclesState {
       recurrenceSlotTimes?: string[];
     }
   ) => Promise<void>;
+  /** Reuse an unused link invite or create one (for QR / share). */
+  ensureLinkInvite: (circleId: string) => Promise<{ secretCode: string }>;
+  acceptInvite: (secretCode: string) => Promise<void>;
 }
 
 export const useCirclesStore = create<CirclesState>((set, get) => ({
@@ -141,5 +155,31 @@ export const useCirclesStore = create<CirclesState>((set, get) => ({
   createTask: async (circleId, body) => {
     await api.post<ApiResponse<Task>>(`/circles/${circleId}/tasks`, body);
     await get().fetchTasks(circleId);
+  },
+
+  ensureLinkInvite: async (circleId) => {
+    const listRes = await api.get<ApiResponse<CircleInviteListItem[]>>(
+      `/circles/${circleId}/invites`
+    );
+    const now = Date.now();
+    const existing = listRes.data.find(
+      (inv) =>
+        inv.kind === 'link' &&
+        (!inv.expiresAt || new Date(inv.expiresAt).getTime() > now)
+    );
+    if (existing) {
+      return { secretCode: existing.secretCode };
+    }
+    const created = await api.post<ApiResponse<{ secretCode: string }>>(
+      `/circles/${circleId}/invites`,
+      { kind: 'link' }
+    );
+    return { secretCode: created.data.secretCode };
+  },
+
+  acceptInvite: async (secretCode) => {
+    await api.post(`/invites/${secretCode}/accept`, {});
+    await get().fetchCircles();
+    await get().refreshAllSummaries();
   },
 }));

@@ -181,17 +181,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing[1],
   },
   avatarText: {
-    fontSize: 24,
+    fontSize: 30,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textInverse,
   },
   userName: {
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
   },
   userRole: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
@@ -203,12 +203,12 @@ const styles = StyleSheet.create({
   },
   stat: { alignItems: 'center', gap: 2 },
   statNum: {
-    fontSize: 22,
+    fontSize: 28,
     fontFamily: 'OpenSans_700Bold',
     color: colors.primary,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
@@ -223,12 +223,12 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   wellbeingTitle: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.primary,
   },
   wellbeingBody: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textSecondary,
     lineHeight: 21,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
 
   section: { gap: spacing[3] },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textMuted,
     textTransform: 'uppercase',
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   settingsLabel: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   signOutText: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.danger,
   },

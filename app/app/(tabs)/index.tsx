@@ -1,11 +1,11 @@
 /**
  * Today screen — Daily Brief (API)
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Pressable } from 'react-native';
 import { View as MotiView } from 'moti/build/components/view';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Warning, User, CheckCircle, Flag, Clipboard, ChatCircle } from 'phosphor-react-native';
+import { Warning, User, CheckCircle, Flag, Clipboard, ChatCircle, Microphone } from 'phosphor-react-native';
 import { ScreenTopInset } from '@/components/ScreenTopInset';
 import { ScreenEmptyState } from '@/components/ScreenEmptyState';
 import { colors, spacing, radius } from '@care/shared/theme';
@@ -15,12 +15,15 @@ import { useChatStore } from '@/store/chat.store';
 import { useNavigationStore } from '@/store/navigation.store';
 import { Text } from '@care/shared/components';
 import type { Concern, Task } from '@care/shared/types';
+import { CircleInvitePanel } from '@/components/CircleInvitePanel';
+import { AiVoiceModal } from '@/components/AiVoiceModal';
 
 export default function TodayScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const focusedCircleId = useNavigationStore((s) => s.focusedCircleId);
   const setFocusedCircleId = useNavigationStore((s) => s.setFocusedCircleId);
+  const [voiceVisible, setVoiceVisible] = useState(false);
 
   const circles = useCirclesStore((s) => s.circles);
   const tasksByCircle = useCirclesStore((s) => s.tasks);
@@ -77,11 +80,15 @@ export default function TodayScreen() {
   }, [circles, tasksByCircle, focusedCircleId]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const focusedCircle = focusedCircleId
+    ? circles.find((c) => c.id === focusedCircleId)
+    : undefined;
 
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <ScreenTopInset testID="today-screen">
+    <View style={styles.container}>
+      <ScreenTopInset testID="today-screen">
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -96,7 +103,7 @@ export default function TodayScreen() {
           <View style={styles.headerRow}>
             <View style={styles.headerText}>
               <Text style={styles.greeting} numberOfLines={2}>
-                {getGreeting()}, {firstName}
+                {focusedCircle ? focusedCircle.name : `${getGreeting()}, ${firstName}`}
               </Text>
               <Text style={styles.date}>{formatDate(new Date())}</Text>
             </View>
@@ -205,8 +212,39 @@ export default function TodayScreen() {
             ))
           )}
         </MotiView>
+
+        {focusedCircle ? (
+          <MotiView
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', damping: 20, delay: 180 }}
+          >
+            <CircleInvitePanel circle={focusedCircle} />
+          </MotiView>
+        ) : null}
       </ScrollView>
-    </ScreenTopInset>
+      </ScreenTopInset>
+
+      {/* Floating AI voice button */}
+      <MotiView
+        from={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', damping: 16, delay: 300 }}
+        style={styles.fabWrap}
+      >
+        <Pressable
+          style={styles.fab}
+          onPress={() => setVoiceVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open AI voice assistant"
+        >
+          <Microphone size={24} color={colors.textInverse} weight="fill" />
+          <Text style={styles.fabText}>Ask Tend</Text>
+        </Pressable>
+      </MotiView>
+
+      <AiVoiceModal visible={voiceVisible} onDismiss={() => setVoiceVisible(false)} />
+    </View>
   );
 }
 
@@ -246,12 +284,38 @@ function formatDate(d: Date): string {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   scroll: { flex: 1 },
   content: {
     padding: spacing[5],
     paddingTop: spacing[6],
     gap: spacing[7],
-    paddingBottom: spacing[10],
+    paddingBottom: spacing[10] + 72, // extra room for the FAB
+  },
+
+  fabWrap: {
+    position: 'absolute',
+    bottom: spacing[7],
+    right: spacing[5],
+  },
+  fab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    backgroundColor: colors.primary,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[5],
+    borderRadius: radius.full,
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  fabText: {
+    fontSize: 17,
+    fontFamily: 'OpenSans_700Bold',
+    color: colors.textInverse,
   },
 
   header: { gap: spacing[1] },
@@ -272,18 +336,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   exitFocusText: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.secondary,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 32,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
     lineHeight: 34,
   },
   date: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
@@ -302,23 +366,23 @@ const styles = StyleSheet.create({
   },
   unreadText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   unreadChevron: {
-    fontSize: 22,
+    fontSize: 28,
     color: colors.textMuted,
   },
 
   section: { gap: spacing[2] },
   sectionLabel: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   sectionHint: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     lineHeight: 17,
@@ -335,12 +399,12 @@ const styles = StyleSheet.create({
   concernBody: { flex: 1, minWidth: 0 },
   concernText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
   concernMeta: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginTop: 4,
@@ -348,7 +412,7 @@ const styles = StyleSheet.create({
 
   taskWrap: { gap: spacing[1] },
   taskCircle: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.secondary,
     textTransform: 'uppercase',
@@ -368,12 +432,12 @@ const styles = StyleSheet.create({
   checkboxDone: { borderWidth: 0 },
   taskContent: { flex: 1, gap: 2 },
   taskTitle: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
   taskMeta: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },

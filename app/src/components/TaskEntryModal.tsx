@@ -391,19 +391,19 @@ export function TaskEntryModal({
 
 const styles = StyleSheet.create({
   modalTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontFamily: 'OpenSans_700Bold',
     color: colors.textPrimary,
   },
   modalHint: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginBottom: spacing[1],
   },
   field: { gap: spacing[1], marginBottom: spacing[3] },
   label: {
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textSecondary,
   },
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
     backgroundColor: colors.surface,
@@ -434,24 +434,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentBg,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.textPrimary,
   },
   chipTextOn: { color: colors.primary },
   singleCircle: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginBottom: spacing[2],
   },
   muted: {
-    fontSize: 13,
+    fontSize: 17,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
   },
   mutedSmall: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textMuted,
     marginTop: 2,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentBg,
   },
   planRowText: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_400Regular',
     color: colors.textPrimary,
   },
@@ -494,18 +494,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[1],
   },
   addSlotText: {
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: 'OpenSans_600SemiBold',
     color: colors.primary,
   },
   error: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: 'OpenSans_400Regular',
     color: colors.concern,
   },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing[3], marginTop: spacing[2] },
   cancelBtn: { paddingVertical: spacing[3], paddingHorizontal: spacing[4] },
-  cancelText: { fontSize: 16, fontFamily: 'OpenSans_600SemiBold', color: colors.textMuted },
+  cancelText: { fontSize: 20, fontFamily: 'OpenSans_600SemiBold', color: colors.textMuted },
   saveBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
@@ -513,5 +513,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[6],
   },
   saveBtnOff: { opacity: 0.5 },
-  saveText: { fontSize: 16, fontFamily: 'OpenSans_600SemiBold', color: colors.textInverse },
+  saveText: { fontSize: 20, fontFamily: 'OpenSans_600SemiBold', color: colors.textInverse },
 });

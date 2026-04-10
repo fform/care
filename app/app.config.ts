@@ -54,6 +54,7 @@ export default ({ config }) => ({
     'expo-secure-store',
     'expo-notifications',
     'expo-apple-authentication',
+    'expo-audio',
     [
       'expo-build-properties',
       {
